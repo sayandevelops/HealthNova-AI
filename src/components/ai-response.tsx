@@ -193,7 +193,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     return (
         <Card className="mt-8 animate-in fade-in-50 duration-500">
           <CardHeader>
-            <CardTitle className="text-2xl font-headline">AI Generated Advice</CardTitle>
+            <CardTitle className="text-2xl font-headline">Answer</CardTitle>
           </CardHeader>
           <CardContent>
             {content}
