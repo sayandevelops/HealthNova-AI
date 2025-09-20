@@ -31,7 +31,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 HealthNova AI
               </span>
             </div>
-            <div className="hidden md:block">
+            <div>
               <SidebarTrigger />
             </div>
           </div>
