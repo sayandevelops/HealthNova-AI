@@ -13,7 +13,7 @@ export function Footer() {
           &copy; {new Date().getFullYear()} HealthNova AI. All Rights Reserved.
         </p>
         <p className="text-xs mt-2">
-          Made by <a href="https://github.com/sayandevelops" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">sayandevelops</a>
+          Made by <a href="https://sayandevelops.vercel.app" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">sayandevelops</a>
         </p>
       </div>
     </footer>
