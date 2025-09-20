@@ -18,16 +18,12 @@ type AIResponseProps = {
 export function AIResponse({ response, isStreaming = false, chatHistory, audioRef }: AIResponseProps) {
   const [audioState, setAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
   const { toast } = useToast();
-  const audioQueueRef = useRef<string[]>([]);
-  const currentAudioIndexRef = useRef(0);
 
   const stopAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    audioQueueRef.current = [];
-    currentAudioIndexRef.current = 0;
     setAudioState('idle');
   };
 
@@ -39,57 +35,38 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
-
-  const playNextInQueue = () => {
-    if (currentAudioIndexRef.current < audioQueueRef.current.length) {
-      const audioSrc = audioQueueRef.current[currentAudioIndexRef.current];
-      if (audioRef.current) {
-        audioRef.current.src = audioSrc;
-        audioRef.current.play().catch(e => {
-            console.error("Audio play failed:", e);
-            toast({ title: "Audio Error", description: "Could not play audio.", variant: "destructive" });
-            stopAudio();
-        });
-        currentAudioIndexRef.current++;
-      }
-    } else {
-      // Finished playing all audio clips
-      stopAudio();
-    }
-  };
-
   const handlePlayAudio = async () => {
     if (audioState === 'loading') return;
 
     if (audioState === 'playing') {
-        stopAudio();
-        return;
+      stopAudio();
+      return;
     }
-    
+
     if (!response) return;
 
     setAudioState('loading');
     try {
-      // Split response into sentences. This regex is basic and might not cover all edge cases.
-      const sentences = response.match(/[^.!?]+[.!?\s]*/g)?.filter(s => s.trim()) || [response];
-      
-      const result = await getAudio(sentences);
+      const result = await getAudio(response);
 
       if ('error' in result) {
         throw new Error(result.error);
       }
-      
-      audioQueueRef.current = result.audio;
-      currentAudioIndexRef.current = 0;
 
       if (!audioRef.current) {
-        const audio = new Audio();
-        audioRef.current = audio;
-        audio.onended = playNextInQueue;
+        audioRef.current = new Audio();
+        audioRef.current.onended = () => {
+          setAudioState('idle');
+        };
       }
       
+      audioRef.current.src = result.audio;
       setAudioState('playing');
-      playNextInQueue();
+      audioRef.current.play().catch(e => {
+        console.error("Audio play failed:", e);
+        toast({ title: "Audio Error", description: "Could not play audio.", variant: "destructive" });
+        stopAudio();
+      });
 
     } catch (error) {
       console.error(error);
@@ -101,6 +78,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       stopAudio();
     }
   };
+
 
   if (isStreaming) {
     return (
