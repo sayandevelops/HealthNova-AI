@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { LifeBuoy, Menu, MessageSquare, Info, Trash2 } from 'lucide-react';
+import { HeartPulse, Menu, MessageSquare, Info, Trash2 } from 'lucide-react';
 import type { ChatThread } from './symptom-checker';
 
 type AppLayoutProps = {
@@ -80,7 +80,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
           About
         </Link>
         <div className="flex items-center gap-3">
-          <LifeBuoy className="h-8 w-8 text-primary" />
+          <HeartPulse className="h-8 w-8 text-primary" />
           <div>
             <p className="text-lg font-bold tracking-tight font-headline">
               HealthNova AI
@@ -107,7 +107,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 font-semibold">
-             <LifeBuoy className="h-6 w-6 text-primary" />
+             <HeartPulse className="h-6 w-6 text-primary" />
             <span className="font-headline">HealthNova AI</span>
           </div>
         </header>
