@@ -109,48 +109,55 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     const flushList = () => {
       if (listItems.length > 0) {
         elements.push(
-          <ol key={`list-${elements.length}`} className="list-decimal list-outside space-y-2 my-4 pl-5 text-foreground/90">
-            {listItems.map((item, idx) => <li key={idx} className="pl-2">{item}</li>)}
-          </ol>
+          <ul key={`list-${elements.length}`} className="list-disc list-outside space-y-2 my-4 pl-6 text-foreground/90">
+            {listItems.map((item, idx) => (
+              <li key={idx} className="pl-2" dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></li>
+            ))}
+          </ul>
         );
         listItems = [];
       }
     };
-    
-    const disclaimerRegex = /^(?:\d+\.\s*)?(?:\*\*)?Disclaimer(?:\*\*)?:/i;
+  
+    const disclaimerRegex = /^(?:\*\*)?Disclaimer(?:\*\*)?:\s*/i;
+    const headingRegex = /^\*\*(.*?)\*\*$/;
   
     lines.forEach((line, index) => {
-      if (disclaimerRegex.test(line)) {
+      const trimmedLine = line.trim();
+  
+      if (disclaimerRegex.test(trimmedLine)) {
         flushList();
         elements.push(
-          <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+          <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-700 dark:text-yellow-400">
             <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            <p className="font-semibold">{line.replace(disclaimerRegex, 'Disclaimer:')}</p>
+            <p className="font-semibold">{trimmedLine.replace(disclaimerRegex, '')}</p>
           </div>
         );
-      } else if (line.match(/^\d+\.\s*/) || line.match(/^\s*-\s*/) || line.match(/^\s*\*\s*/)) {
-          listItems.push(line.replace(/^\d+\.\s*|^\s*-\s*|^\s*\*\s*/, ''));
+      } else if (trimmedLine.startsWith('⚠️')) {
+        flushList();
+        elements.push(
+          <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive text-base">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="font-bold">{trimmedLine.replace('⚠️', '').trim()}</p>
+          </div>
+        );
+      } else if (trimmedLine.startsWith('🌿 Ayurvedic Tip:')) {
+        flushList();
+        elements.push(
+          <div key={index} className="my-4 flex items-start gap-3 rounded-lg bg-accent/20 p-4 border border-accent/50 text-sm">
+             <Leaf className="h-5 w-5 flex-shrink-0 mt-0.5 text-accent" />
+            <p className="font-medium text-accent-foreground/90" dangerouslySetInnerHTML={{ __html: trimmedLine.replace('🌿 Ayurvedic Tip:', '').trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>
+          </div>
+        );
+      } else if (headingRegex.test(trimmedLine)) {
+        flushList();
+        const headingText = (trimmedLine.match(headingRegex) as string[])[1];
+        elements.push(<h3 key={index} className="font-bold text-lg mt-5 mb-2">{headingText}</h3>);
+      } else if (trimmedLine.match(/^\d+\.\s*/) || trimmedLine.match(/^\s*-\s*/) || trimmedLine.match(/^\s*\*\s*/)) {
+        listItems.push(trimmedLine.replace(/^\d+\.\s*|^\s*-\s*|^\s*\*\s*/, ''));
       } else {
         flushList();
-        if (line.startsWith('⚠️')) {
-          elements.push(
-            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <p className="font-semibold">{line.replace('⚠️', '').trim()}</p>
-            </div>
-          );
-        } else if (line.startsWith('🌿 Ayurvedic Tip:')) {
-          elements.push(
-            <div key={index} className="my-4 flex items-start gap-3 rounded-lg bg-accent/20 p-3 text-accent-foreground border border-accent/50 text-sm">
-               <Leaf className="h-5 w-5 flex-shrink-0 mt-0.5 text-accent" />
-              <p className="font-medium">{line.replace('🌿 Ayurvedic Tip:', '').trim()}</p>
-            </div>
-          );
-        } else if (line.startsWith('**') && line.endsWith('**')) {
-           elements.push(<h3 key={index} className="font-bold text-lg mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>);
-        } else {
-           elements.push(<p key={index} className="my-2">{line.replace(/\*\*/g, '')}</p>);
-        }
+        elements.push(<p key={index} className="my-2" dangerouslySetInnerHTML={{ __html: trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>);
       }
     });
   
