@@ -51,7 +51,7 @@ const LOCAL_STORAGE_KEY = 'medaid-chat-history';
 
 export function SymptomChecker() {
   const [state, formAction] = useFormState(getHealthAdvice, initialState);
-  const [isPending, startTransition] = useTransition();
+  const { pending: isFormPending } = useFormStatus();
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
@@ -61,7 +61,6 @@ export function SymptomChecker() {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load chat history from local storage on initial client render
     try {
       const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedHistory) {
@@ -76,7 +75,6 @@ export function SymptomChecker() {
     }
   }, []);
 
-  // Save chat history to local storage whenever it changes
   useEffect(() => {
       try {
         if (chatHistory.length > 0) {
@@ -103,14 +101,12 @@ export function SymptomChecker() {
 
         setChatHistory(prevHistory => {
             if (currentChatId) {
-                // Add to existing chat
                 return prevHistory.map(chat => 
                     chat.id === currentChatId 
                         ? { ...chat, messages: [...chat.messages, ...newMessages] }
                         : chat
                 );
             } else {
-                // Create new chat
                 const newChatId = new Date().toISOString();
                 const newChat: ChatThread = {
                     id: newChatId,
@@ -122,6 +118,12 @@ export function SymptomChecker() {
             }
         });
         setSymptoms('');
+        // Reset form state after success
+        formRef.current?.reset();
+        (initialState as any).message = null;
+        (initialState as any).errors = null;
+        (initialState as any).data = null;
+
 
     } else if (state.message && state.message !== "Invalid form data." && state.message !== "Success") {
       toast({
@@ -130,16 +132,16 @@ export function SymptomChecker() {
         variant: "destructive",
       });
     }
-  }, [state]);
+  }, [state, currentChatId, toast]);
 
   useEffect(() => {
     chatContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [chatHistory, isPending, currentChatId]);
+  }, [chatHistory, isFormPending, currentChatId]);
 
   const handleExampleClick = (symptom: string) => {
     setSymptoms(symptom);
     setTimeout(() => {
-        formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click()
+        formRef.current?.requestSubmit();
     }, 0);
   }
 
@@ -151,16 +153,15 @@ export function SymptomChecker() {
     setCurrentChatId(null);
     setSymptoms('');
     // Manually reset the form state
-    initialState.data = null;
-    initialState.errors = null;
-    initialState.message = null;
+    (initialState as any).data = null;
+    (initialState as any).errors = null;
+    (initialState as any).message = null;
   }
 
   const handleDeleteChat = (id: string) => {
     setChatHistory(prev => {
         const newHistory = prev.filter(chat => chat.id !== id);
         if (currentChatId === id) {
-            // If we deleted the active chat, select the first one or start a new chat
             if (newHistory.length > 0) {
                 setCurrentChatId(newHistory[0].id);
             } else {
@@ -178,11 +179,8 @@ export function SymptomChecker() {
   }));
 
   const handleFormAction = (formData: FormData) => {
-    if (isPending) return;
-    startTransition(() => {
-        if(symptoms.trim() === '') return;
-        formAction(formData);
-    });
+    if(symptoms.trim() === '') return;
+    formAction(formData);
   };
 
   return (
@@ -195,7 +193,7 @@ export function SymptomChecker() {
     >
         <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
-                {currentChatMessages.length === 0 && !isPending ? (
+                {currentChatMessages.length === 0 && !isFormPending ? (
                     <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                         <div className="mb-8">
                             <HeartPulse className="h-16 w-16 text-primary mx-auto" />
@@ -227,7 +225,7 @@ export function SymptomChecker() {
                                 {msg.role === 'user' && <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                             </div>
                         ))}
-                        {isPending && (
+                        {isFormPending && (
                             <div className="flex gap-4 items-start justify-start w-full">
                                 <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
                                 <div className="rounded-lg p-3 max-w-[85%] bg-card border">
@@ -235,7 +233,7 @@ export function SymptomChecker() {
                                 </div>
                             </div>
                         )}
-                       <div className="h-24" /> {/* Spacer for bottom padding */}
+                       <div className="h-24" />
                     </div>
                 )}
             </div>
