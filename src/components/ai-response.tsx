@@ -2,7 +2,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Leaf } from "lucide-react";
 
 type AIResponseProps = {
@@ -15,10 +14,10 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
 
   if (isStreaming) {
     return (
-       <div className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-full" />
+       <div className="flex items-center space-x-2">
+          <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce [animation-delay:-0.32s]"></span>
+          <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce [animation-delay:-0.16s]"></span>
+          <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce"></span>
         </div>
     );
   }
@@ -72,6 +71,8 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
               <p className="font-medium">{line.replace('🌿 Ayurvedic Tip:', '').trim()}</p>
             </div>
           );
+        } else if (line.startsWith('**') && line.endsWith('**')) {
+           elements.push(<h3 key={index} className="font-bold text-lg mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>);
         } else {
            elements.push(<p key={index} className="my-2">{line.replace(/\*\*/g, '')}</p>);
         }

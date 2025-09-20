@@ -66,3 +66,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @keyframes typing-bounce {
+    0%, 80%, 100% {
+      transform: scale(0);
+    }
+    40% {
+      transform: scale(1.0);
+    }
+  }
+
+  .animate-typing-bounce {
+    animation: typing-bounce 1.4s infinite ease-in-out both;
+  }
+}
