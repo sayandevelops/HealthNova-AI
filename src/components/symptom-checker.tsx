@@ -106,7 +106,7 @@ export function SymptomChecker() {
                     <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                        {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
                         <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} />}
+                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={chatHistory} />}
                         </div>
                         {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
                     </div>
@@ -115,7 +115,7 @@ export function SymptomChecker() {
                      <div className="flex gap-3 justify-start">
                         <Bot className="h-6 w-6 text-primary flex-shrink-0" />
                         <div className="rounded-lg p-3 max-w-[85%] bg-muted">
-                           <AIResponse response={null} isStreaming={true} />
+                           <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} />
                         </div>
                     </div>
                 )}
@@ -177,7 +177,7 @@ export function SymptomChecker() {
           </CardContent>
         </Card>
         
-        {chatHistory.length === 0 && <AIResponse response={state.data?.response ?? null} isStreaming={useFormStatus().pending} />}
+        {chatHistory.length === 0 && <AIResponse response={state.data?.response ?? null} isStreaming={useFormStatus().pending} chatHistory={chatHistory} />}
 
       </div>
     </div>

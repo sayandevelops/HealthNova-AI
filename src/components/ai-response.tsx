@@ -4,13 +4,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Leaf } from "lucide-react";
+import type { ChatHistory } from "@/ai/flows/symptom-checker";
 
 type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
+  chatHistory: { role: 'user' | 'model', content: string }[];
 };
 
-export function AIResponse({ response, isStreaming = false }: AIResponseProps) {
+export function AIResponse({ response, isStreaming = false, chatHistory }: AIResponseProps) {
 
   if (isStreaming) {
     return (
