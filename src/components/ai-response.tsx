@@ -12,18 +12,22 @@ type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
   chatHistory: GenkitChatHistory;
-  audioRef: React.MutableRefObject<HTMLAudioElement | null>;
 };
 
-export function AIResponse({ response, isStreaming = false, chatHistory, audioRef }: AIResponseProps) {
+export function AIResponse({ response, isStreaming = false }: AIResponseProps) {
   const [audioState, setAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
   const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioQueueRef = useRef<string[]>([]);
+  const currentAudioIndexRef = useRef<number>(0);
 
   const stopAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
     }
+    audioQueueRef.current = [];
+    currentAudioIndexRef.current = 0;
     setAudioState('idle');
   };
 
@@ -32,9 +36,32 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     return () => {
       stopAudio();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
+  const playNextInQueue = () => {
+    if (currentAudioIndexRef.current < audioQueueRef.current.length) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+        audioRef.current.onended = playNextInQueue;
+        audioRef.current.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          toast({ title: "Audio Error", description: "An error occurred during playback.", variant: "destructive" });
+          stopAudio();
+        };
+      }
+      audioRef.current.src = audioQueueRef.current[currentAudioIndexRef.current];
+      audioRef.current.play().catch(e => {
+        console.error("Audio play failed:", e);
+        toast({ title: "Audio Error", description: "Could not play audio.", variant: "destructive" });
+        stopAudio();
+      });
+      currentAudioIndexRef.current++;
+    } else {
+      stopAudio(); // All tracks finished
+    }
+  };
+  
   const handlePlayAudio = async () => {
     if (audioState === 'loading') return;
 
@@ -47,38 +74,34 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
 
     setAudioState('loading');
     try {
-      const result = await getAudio(response);
+      const sentences = response.match(/[^.!?]+[.!?\s]*/g)?.filter(s => s.trim()) || [response];
+
+      const result = await getAudio(sentences);
 
       if ('error' in result) {
         throw new Error(result.error);
       }
-
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-        audioRef.current.onended = () => {
-          setAudioState('idle');
-        };
-      }
       
-      audioRef.current.src = result.audio;
-      setAudioState('playing');
-      audioRef.current.play().catch(e => {
-        console.error("Audio play failed:", e);
-        toast({ title: "Audio Error", description: "Could not play audio.", variant: "destructive" });
-        stopAudio();
-      });
+      audioQueueRef.current = result.audio.filter(Boolean);
+      currentAudioIndexRef.current = 0;
+      
+      if (audioQueueRef.current.length > 0) {
+        setAudioState('playing');
+        playNextInQueue();
+      } else {
+        throw new Error("No audio could be generated for this message.");
+      }
 
     } catch (error) {
       console.error(error);
       toast({
         title: "Audio Error",
-        description: error instanceof Error ? error.message : "Could not generate audio for this message.",
+        description: error instanceof Error ? error.message : "Could not generate audio.",
         variant: "destructive",
       });
       stopAudio();
     }
   };
-
 
   if (isStreaming) {
     return (

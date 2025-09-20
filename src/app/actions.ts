@@ -87,17 +87,19 @@ export async function getHealthAdvice(
   }
 }
 
-const ttsActionSchema = z.string().min(1).max(10000);
+const ttsActionSchema = z.array(z.string().min(1).max(1000)).min(1).max(100);
 
-export async function getAudio(text: string): Promise<{ audio: string } | { error: string }> {
-  const validatedText = ttsActionSchema.safeParse(text);
+export async function getAudio(chunks: string[]): Promise<{ audio: string[] } | { error: string }> {
+  const validatedText = ttsActionSchema.safeParse(chunks);
   if (!validatedText.success) {
     return { error: "Invalid text provided for audio conversion." };
   }
 
   try {
-    const result = await textToSpeech(validatedText.data);
-    return { audio: result.audio };
+    const audioPromises = validatedText.data.map(chunk => textToSpeech(chunk));
+    const results = await Promise.all(audioPromises);
+    const audioData = results.map(result => result.audio);
+    return { audio: audioData };
   } catch (error) {
     console.error("TTS Error:", error);
     return { error: "Failed to generate audio. Please try again." };
