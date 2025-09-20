@@ -165,18 +165,16 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
   
     return elements;
   };
-  
-  const isInitialMessage = chatHistory.length <= 2;
-  
-  const content = (
+    
+  return (
     <div className="space-y-4">
       <div className="flex justify-start mb-2">
         <Button
           size="icon"
           onClick={handlePlayAudio}
-          aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
+          aria-label={audioState === 'playing' ? 'Stop audio' : 'Stop audio'}
           disabled={audioState === 'loading'}
-          className="h-8 w-8 bg-transparent text-primary hover:bg-primary/10"
+          className="h-8 w-8 text-primary hover:bg-primary/10"
         >
           {audioState === 'loading' && <LoaderCircle className="h-5 w-5 animate-spin" />}
           {audioState !== 'loading' && <Volume2 className="h-5 w-5" />}
@@ -187,19 +185,4 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       </div>
     </div>
   );
-
-  if (isInitialMessage) {
-    return (
-        <Card className="mt-8 animate-in fade-in-50 duration-500">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline">Answer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {content}
-          </CardContent>
-        </Card>
-      );
-  }
-
-  return content;
 }
