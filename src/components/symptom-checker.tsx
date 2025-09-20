@@ -2,7 +2,7 @@
 "use client";
 
 import { useFormStatus, useFormState } from "react-dom";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getHealthAdvice, type FormState } from "@/app/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { HeartPulse, User, Bot, RefreshCcw, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLayout } from "./app-layout";
 import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ChatMessage = {
     role: 'user' | 'model';
@@ -22,6 +23,7 @@ export type ChatThread = {
     id: string;
     title: string;
     messages: ChatMessage[];
+    language: 'en' | 'hi' | 'bn';
 };
 
 const initialState: FormState = {
@@ -51,7 +53,6 @@ const LOCAL_STORAGE_KEY = 'healthnova-chat-history';
 
 export function SymptomChecker() {
   const [state, formAction] = useFormState(getHealthAdvice, initialState);
-  const { pending: isFormPending } = useFormStatus();
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
@@ -59,6 +60,9 @@ export function SymptomChecker() {
 
   const [chatHistory, setChatHistory] = useState<ChatThread[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [language, setLanguage] = useState<'en' | 'hi' | 'bn'>('en');
+
+  const { pending: isFormPending } = useFormStatus();
 
   // Load chat history from local storage on initial render
   useEffect(() => {
@@ -91,43 +95,41 @@ export function SymptomChecker() {
   // Handle form submission response
   useEffect(() => {
     if (state.message === "Success" && state.data) {
-      const lastUserMessageContent = state.data.history.findLast(m => m.role === 'user')?.content[0].text ?? '';
+        const lastUserMessageContent = state.data.history.findLast(m => m.role === 'user')?.content[0].text ?? '';
+        
+        const newUserMessage: ChatMessage = { role: 'user', content: lastUserMessageContent };
+        const newAiMessage: ChatMessage = { role: 'model', content: state.data.response };
+        
+        setChatHistory(prevHistory => {
+            if (currentChatId) {
+                // Update existing chat
+                return prevHistory.map(chat =>
+                    chat.id === currentChatId
+                        ? { ...chat, messages: [...chat.messages, newUserMessage, newAiMessage] }
+                        : chat
+                );
+            } else {
+                // Create new chat
+                const newChatId = new Date().toISOString();
+                const newChat: ChatThread = {
+                    id: newChatId,
+                    title: lastUserMessageContent.substring(0, 40) + (lastUserMessageContent.length > 40 ? '...' : ''),
+                    messages: [newUserMessage, newAiMessage],
+                    language: language,
+                };
+                setCurrentChatId(newChatId);
+                return [newChat, ...prevHistory];
+            }
+        });
 
-      const newMessages: ChatMessage[] = [
-        { role: 'user', content: lastUserMessageContent },
-        { role: 'model', content: state.data.response }
-      ];
-
-      setChatHistory(prevHistory => {
-        // If we are in an existing chat, update it
-        if (currentChatId) {
-          return prevHistory.map(chat =>
-            chat.id === currentChatId
-              ? { ...chat, messages: [...chat.messages, ...newMessages] }
-              : chat
-          );
-        } else {
-          // Otherwise, create a new chat
-          const newChatId = new Date().toISOString();
-          const newChat: ChatThread = {
-            id: newChatId,
-            title: lastUserMessageContent.substring(0, 40) + (lastUserMessageContent.length > 40 ? '...' : ''),
-            messages: newMessages
-          };
-          setCurrentChatId(newChatId);
-          return [newChat, ...prevHistory];
-        }
-      });
-
-      setSymptoms('');
-      formRef.current?.reset();
-      
-    } else if (state.message && !["Success", "Invalid form data."].includes(state.message)) {
-      toast({
-        title: "Error",
-        description: state.message,
-        variant: "destructive",
-      });
+        setSymptoms('');
+        formRef.current?.reset();
+    } else if (state.message && state.message !== "Success" && state.message !== "Invalid form data.") {
+        toast({
+            title: "Error",
+            description: state.message,
+            variant: "destructive",
+        });
     }
   }, [state]);
 
@@ -136,7 +138,7 @@ export function SymptomChecker() {
     if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatHistory, isFormPending, currentChatId]);
+  }, [chatHistory, currentChatId, isFormPending]);
 
 
   const handleExampleClick = (symptom: string) => {
@@ -153,40 +155,45 @@ export function SymptomChecker() {
     }
     setCurrentChatId(null);
     setSymptoms('');
+    setLanguage('en');
   }
 
   const handleDeleteChat = (idToDelete: string) => {
     setChatHistory(prev => {
       const newHistory = prev.filter(chat => chat.id !== idToDelete);
-      
       if (currentChatId === idToDelete) {
-        // If the deleted chat was the current one, switch to a new chat screen
-        handleNewChat();
+        setCurrentChatId(null);
+        setLanguage('en');
       }
-      
       return newHistory;
     });
   };
 
-  const currentChatMessages = chatHistory.find(chat => chat.id === currentChatId)?.messages ?? [];
+  const handleSelectChat = (id: string) => {
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+    }
+    const selectedChat = chatHistory.find(chat => chat.id === id);
+    if(selectedChat) {
+        setCurrentChatId(id);
+        setLanguage(selectedChat.language);
+    }
+  }
+
+  const currentChat = chatHistory.find(chat => chat.id === currentChatId);
+  const currentChatMessages = currentChat?.messages ?? [];
   const historyForForm: GenkitChatHistory = currentChatMessages.map(msg => ({
       role: msg.role,
       content: [{ text: msg.content }]
   }));
+  const currentLanguage = currentChat?.language || language;
 
   const handleFormAction = (formData: FormData) => {
     if(symptoms.trim() === '') return;
     formAction(formData);
   };
   
-  const handleSelectChat = (id: string) => {
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
-    setCurrentChatId(id);
-  }
-
   return (
     <AppLayout
         chatHistory={chatHistory}
@@ -219,6 +226,25 @@ export function SymptomChecker() {
                     </div>
                 ) : (
                     <div className="max-w-3xl mx-auto py-6 px-4 space-y-6">
+                        {currentChatId && (
+                            <div className="flex justify-end mb-4">
+                                <Select value={currentLanguage} onValueChange={(value: 'en' | 'hi' | 'bn') => {
+                                    setLanguage(value);
+                                    if(currentChatId) {
+                                        setChatHistory(prev => prev.map(chat => chat.id === currentChatId ? {...chat, language: value} : chat));
+                                    }
+                                }}>
+                                    <SelectTrigger className="w-[120px]">
+                                        <SelectValue placeholder="Language" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="en">English</SelectItem>
+                                        <SelectItem value="hi">Hindi</SelectItem>
+                                        <SelectItem value="bn">Bengali</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         {currentChatMessages.map((msg, index) => (
                             <div key={index} className={`flex gap-4 items-start w-full`}>
                                 {msg.role === 'model' && <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
@@ -229,6 +255,15 @@ export function SymptomChecker() {
                                 {msg.role === 'user' && <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                             </div>
                         ))}
+                        {isFormPending && (
+                             <div className={`flex gap-4 items-start w-full`}>
+                                <div className="flex-grow"></div>
+                                <div className={`rounded-lg p-3 max-w-[85%] bg-primary text-primary-foreground`}>
+                                    <p>{symptoms}</p>
+                                </div>
+                                <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
+                            </div>
+                        )}
                         {isFormPending && (
                             <div className="flex gap-4 items-start justify-start w-full">
                                 <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
@@ -245,8 +280,22 @@ export function SymptomChecker() {
             <div className="px-4 py-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
                 <div className="max-w-3xl mx-auto">
                     <form ref={formRef} action={handleFormAction} className="relative">
+                        {!currentChatId && (
+                             <div className="flex justify-start mb-2">
+                                <Select value={language} onValueChange={(value: 'en' | 'hi' | 'bn') => setLanguage(value)}>
+                                    <SelectTrigger className="w-[120px]">
+                                        <SelectValue placeholder="Language" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="en">English</SelectItem>
+                                        <SelectItem value="hi">Hindi</SelectItem>
+                                        <SelectItem value="bn">Bengali</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
-                        <input type="hidden" name="language" value="en" />
+                        <input type="hidden" name="language" value={currentLanguage} />
                         <Textarea
                             id="symptoms"
                             name="symptoms"
@@ -278,5 +327,3 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
-
-    
