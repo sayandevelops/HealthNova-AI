@@ -172,12 +172,11 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     <div className="space-y-4">
       <div className="flex justify-start mb-2">
         <Button
-          variant="ghost"
           size="icon"
           onClick={handlePlayAudio}
           aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
           disabled={audioState === 'loading'}
-          className="h-8 w-8"
+          className="h-8 w-8 bg-transparent text-primary hover:bg-primary/10"
         >
           {audioState === 'loading' && <LoaderCircle className="h-5 w-5 animate-spin" />}
           {audioState !== 'loading' && <Volume2 className="h-5 w-5" />}

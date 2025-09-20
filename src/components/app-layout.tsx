@@ -35,7 +35,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
   const sidebarContent = (
     <div className="flex flex-col h-full bg-card text-card-foreground">
       <div className="p-4 border-b">
-        <Button variant="outline" className="w-full justify-start gap-2 hover:bg-primary/20" onClick={handleNewChat}>
+        <Button variant="secondary" className="w-full justify-start gap-2 hover:bg-primary/20" onClick={handleNewChat}>
           <MessageSquare className="h-4 w-4" />
           New Chat
         </Button>
