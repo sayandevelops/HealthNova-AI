@@ -7,8 +7,8 @@ export function Header() {
         <div className="flex h-16 items-center justify-center">
           <div className="flex items-center gap-2">
             <LifeBuoy className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold tracking-tight font-headline animate-title-in">
-              HealthNova AI
+            <span className="text-2xl font-bold tracking-tight font-headline">
+              MedAid AI
             </span>
           </div>
         </div>

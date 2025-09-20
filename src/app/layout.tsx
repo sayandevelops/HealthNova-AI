@@ -4,7 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'HealthNova AI',
+  title: 'MedAid AI',
   description: 'Your AI medical-first-aid and Ayurvedic wellness advisor.',
 };
 
