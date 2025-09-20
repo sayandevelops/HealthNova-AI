@@ -64,7 +64,12 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
             </div>
           );
         } else if (line.toLowerCase().startsWith('disclaimer:')) {
-          elements.push(<p key={index} className="text-xs text-muted-foreground mt-4 italic">{line}</p>);
+           elements.push(
+            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-destructive text-xs">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <p className="font-semibold">{line}</p>
+            </div>
+          );
         } else {
            elements.push(<p key={index} className="my-2">{line}</p>);
         }
