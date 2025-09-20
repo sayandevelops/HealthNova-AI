@@ -83,7 +83,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
           <LifeBuoy className="h-8 w-8 text-primary" />
           <div>
             <p className="text-lg font-bold tracking-tight font-headline">
-              MedAid AI
+              HealthNova AI
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
           </Sheet>
           <div className="flex items-center gap-2 font-semibold">
              <LifeBuoy className="h-6 w-6 text-primary" />
-            <span className="font-headline">MedAid AI</span>
+            <span className="font-headline">HealthNova AI</span>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>

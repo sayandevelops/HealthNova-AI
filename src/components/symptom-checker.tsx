@@ -47,7 +47,7 @@ const exampleSymptoms = [
     { name: "Unconscious", symptom: "Someone is unconscious and not responding", label: "Emergency" },
 ];
 
-const LOCAL_STORAGE_KEY = 'medaid-chat-history';
+const LOCAL_STORAGE_KEY = 'healthnova-chat-history';
 
 export function SymptomChecker() {
   const [state, formAction] = useFormState(getHealthAdvice, initialState);
@@ -70,7 +70,6 @@ export function SymptomChecker() {
     } catch (e) {
       console.error("Failed to load chat history from local storage:", e);
     }
-    // We intentionally don't set a chat ID here to default to the new chat screen.
   }, []);
 
   useEffect(() => {
@@ -195,7 +194,7 @@ export function SymptomChecker() {
                     <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                         <div className="mb-8">
                             <HeartPulse className="h-16 w-16 text-primary mx-auto" />
-                            <h1 className="text-3xl font-bold font-headline mt-4">MedAid AI</h1>
+                            <h1 className="text-3xl font-bold font-headline mt-4">HealthNova AI</h1>
                             <p className="text-muted-foreground mt-2">Your AI medical-first-aid and Ayurvedic wellness advisor.</p>
                         </div>
                         <div className="w-full max-w-2xl mx-auto">
@@ -264,7 +263,7 @@ export function SymptomChecker() {
                         <SubmitButton />
                     </form>
                      <p className="text-xs text-center text-muted-foreground mt-2">
-                        MedAid AI can make mistakes. Consider checking important information.
+                        HealthNova AI can make mistakes. Consider checking important information.
                     </p>
                 </div>
             </div>
