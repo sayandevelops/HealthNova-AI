@@ -50,16 +50,18 @@ export function SymptomChecker() {
 
   useEffect(() => {
     if (state.message === "Success" && state.data) {
-        setChatHistory((prev) => [...prev, { role: 'user', content: symptoms }, { role: 'model', content: state.data.response }]);
+        const lastUserMessage = state.data.history.findLast(m => m.role === 'user');
+        const userContent = lastUserMessage?.content[0].text ?? '';
+        setChatHistory((prev) => [...prev, { role: 'user', content: userContent }, { role: 'model', content: state.data.response }]);
         setSymptoms('');
-    } else if (state.message && state.message !== "Invalid form data.") {
+    } else if (state.message && state.message !== "Invalid form data." && state.message !== "Success") {
       toast({
         title: "Error",
         description: state.message,
         variant: "destructive",
       });
     }
-  }, [state, toast, symptoms]);
+  }, [state, toast]);
 
   useEffect(() => {
     chatContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -111,7 +113,7 @@ export function SymptomChecker() {
                         {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
                     </div>
                 ))}
-                {useFormStatus().pending && chatHistory.length > 0 && (
+                {useFormStatus().pending && (
                      <div className="flex gap-3 justify-start">
                         <Bot className="h-6 w-6 text-primary flex-shrink-0" />
                         <div className="rounded-lg p-3 max-w-[85%] bg-muted">
@@ -138,7 +140,9 @@ export function SymptomChecker() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
+                        if (!useFormStatus().pending) {
+                            formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
+                        }
                     }
                   }}
                 />
