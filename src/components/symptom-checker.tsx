@@ -66,13 +66,11 @@ export function SymptomChecker() {
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory) as ChatThread[];
         setChatHistory(parsedHistory);
-        if (parsedHistory.length > 0 && !currentChatId) {
-            setCurrentChatId(parsedHistory[0].id);
-        }
       }
     } catch (e) {
       console.error("Failed to load chat history from local storage:", e);
     }
+    // We intentionally don't set a chat ID here to default to the new chat screen.
   }, []);
 
   useEffect(() => {
