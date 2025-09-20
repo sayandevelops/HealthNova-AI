@@ -54,13 +54,13 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
+                className="h-8 w-8 shrink-0"
                 onClick={(e) => {
                     e.stopPropagation();
                     onDeleteChat(chat.id);
                 }}
                 >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 text-blue-500" />
             </Button>
           </div>
         ))}
