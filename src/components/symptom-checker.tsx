@@ -60,6 +60,7 @@ export function SymptomChecker() {
   const [chatHistory, setChatHistory] = useState<ChatThread[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Load chat history from local storage on initial render
   useEffect(() => {
     try {
       const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -72,100 +73,98 @@ export function SymptomChecker() {
     }
   }, []);
 
+  // Save chat history to local storage whenever it changes
   useEffect(() => {
-      try {
-        if (chatHistory.length > 0) {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(chatHistory));
-        } else {
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
-        }
-      } catch (e) {
-        console.error("Failed to save chat history to local storage:", e);
+    try {
+      if (chatHistory.length > 0) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(chatHistory));
+      } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
       }
+    } catch (e) {
+      console.error("Failed to save chat history to local storage:", e);
+    }
   }, [chatHistory]);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // Handle form submission response
   useEffect(() => {
     if (state.message === "Success" && state.data) {
-        const lastUserMessage = state.data.history.findLast(m => m.role === 'user');
-        const userContent = lastUserMessage?.content[0].text ?? '';
+      const lastUserMessageContent = state.data.history.findLast(m => m.role === 'user')?.content[0].text ?? '';
 
-        const newMessages: ChatMessage[] = [
-            { role: 'user', content: userContent },
-            { role: 'model', content: state.data.response }
-        ];
+      const newMessages: ChatMessage[] = [
+        { role: 'user', content: lastUserMessageContent },
+        { role: 'model', content: state.data.response }
+      ];
 
-        setChatHistory(prevHistory => {
-            if (currentChatId) {
-                return prevHistory.map(chat => 
-                    chat.id === currentChatId 
-                        ? { ...chat, messages: [...chat.messages, ...newMessages] }
-                        : chat
-                );
-            } else {
-                const newChatId = new Date().toISOString();
-                const newChat: ChatThread = {
-                    id: newChatId,
-                    title: userContent.substring(0, 40) + (userContent.length > 40 ? '...' : ''),
-                    messages: newMessages
-                };
-                setCurrentChatId(newChatId);
-                return [newChat, ...prevHistory];
-            }
-        });
-        setSymptoms('');
-        // Reset form state after success
-        formRef.current?.reset();
-        (initialState as any).message = null;
-        (initialState as any).errors = null;
-        (initialState as any).data = null;
+      setChatHistory(prevHistory => {
+        // If we are in an existing chat, update it
+        if (currentChatId) {
+          return prevHistory.map(chat =>
+            chat.id === currentChatId
+              ? { ...chat, messages: [...chat.messages, ...newMessages] }
+              : chat
+          );
+        } else {
+          // Otherwise, create a new chat
+          const newChatId = new Date().toISOString();
+          const newChat: ChatThread = {
+            id: newChatId,
+            title: lastUserMessageContent.substring(0, 40) + (lastUserMessageContent.length > 40 ? '...' : ''),
+            messages: newMessages
+          };
+          setCurrentChatId(newChatId);
+          return [newChat, ...prevHistory];
+        }
+      });
 
-
-    } else if (state.message && state.message !== "Invalid form data." && state.message !== "Success") {
+      setSymptoms('');
+      formRef.current?.reset();
+      
+    } else if (state.message && !["Success", "Invalid form data."].includes(state.message)) {
       toast({
         title: "Error",
         description: state.message,
         variant: "destructive",
       });
     }
-  }, [state, currentChatId, toast]);
+  }, [state]);
 
+  // Scroll to bottom of chat
   useEffect(() => {
-    chatContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [chatHistory, isFormPending, currentChatId]);
+
 
   const handleExampleClick = (symptom: string) => {
     setSymptoms(symptom);
     setTimeout(() => {
-        formRef.current?.requestSubmit();
+      formRef.current?.requestSubmit();
     }, 0);
   }
 
   const handleNewChat = () => {
     if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
     setCurrentChatId(null);
     setSymptoms('');
-    // Manually reset the form state
-    (initialState as any).data = null;
-    (initialState as any).errors = null;
-    (initialState as any).message = null;
   }
 
-  const handleDeleteChat = (id: string) => {
+  const handleDeleteChat = (idToDelete: string) => {
     setChatHistory(prev => {
-        const newHistory = prev.filter(chat => chat.id !== id);
-        if (currentChatId === id) {
-            if (newHistory.length > 0) {
-                setCurrentChatId(newHistory[0].id);
-            } else {
-                handleNewChat();
-            }
-        }
-        return newHistory;
+      const newHistory = prev.filter(chat => chat.id !== idToDelete);
+      
+      if (currentChatId === idToDelete) {
+        // If the deleted chat was the current one, switch to a new chat screen
+        handleNewChat();
+      }
+      
+      return newHistory;
     });
   };
 
@@ -179,12 +178,20 @@ export function SymptomChecker() {
     if(symptoms.trim() === '') return;
     formAction(formData);
   };
+  
+  const handleSelectChat = (id: string) => {
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+    }
+    setCurrentChatId(id);
+  }
 
   return (
     <AppLayout
         chatHistory={chatHistory}
         currentChatId={currentChatId}
-        onSelectChat={setCurrentChatId}
+        onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
     >
@@ -271,3 +278,5 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
+
+    
