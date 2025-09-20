@@ -8,11 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AIResponse } from "@/components/ai-response";
 import { useToast } from "@/hooks/use-toast";
-import { HeartPulse, User, Bot, RefreshCcw, Send } from "lucide-react";
+import { HeartPulse, User, Bot, RefreshCcw, Send, Languages } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLayout } from "./app-layout";
 import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ChatMessage = {
     role: 'user' | 'model';
@@ -77,6 +77,11 @@ export function SymptomChecker() {
     }
   }, []);
 
+  // Set currentChatId to null on first load/refresh
+  useEffect(() => {
+    setCurrentChatId(null);
+  }, []);
+
   // Save chat history to local storage whenever it changes
   useEffect(() => {
     try {
@@ -123,7 +128,8 @@ export function SymptomChecker() {
         });
 
         setSymptoms('');
-        formRef.current?.reset();
+        // Do not reset the form, to retain hidden input values.
+        // formRef.current?.reset();
     } else if (state.message && state.message !== "Success" && state.message !== "Invalid form data.") {
         toast({
             title: "Error",
@@ -138,7 +144,7 @@ export function SymptomChecker() {
     if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatHistory, currentChatId, isFormPending]);
+  }, [chatHistory, currentChatId, isFormPending, state.data]);
 
 
   const handleExampleClick = (symptom: string) => {
@@ -162,7 +168,7 @@ export function SymptomChecker() {
     setChatHistory(prev => {
       const newHistory = prev.filter(chat => chat.id !== idToDelete);
       if (currentChatId === idToDelete) {
-        setCurrentChatId(null);
+        setCurrentChatId(null); // Go to new chat view
         setLanguage('en');
       }
       return newHistory;
@@ -194,6 +200,13 @@ export function SymptomChecker() {
     formAction(formData);
   };
   
+  const handleLanguageChange = (value: 'en' | 'hi' | 'bn') => {
+    setLanguage(value);
+    if (currentChatId) {
+        setChatHistory(prev => prev.map(chat => chat.id === currentChatId ? {...chat, language: value} : chat));
+    }
+  };
+
   return (
     <AppLayout
         chatHistory={chatHistory}
@@ -226,25 +239,6 @@ export function SymptomChecker() {
                     </div>
                 ) : (
                     <div className="max-w-3xl mx-auto py-6 px-4 space-y-6">
-                        {currentChatId && (
-                            <div className="flex justify-end mb-4">
-                                <Select value={currentLanguage} onValueChange={(value: 'en' | 'hi' | 'bn') => {
-                                    setLanguage(value);
-                                    if(currentChatId) {
-                                        setChatHistory(prev => prev.map(chat => chat.id === currentChatId ? {...chat, language: value} : chat));
-                                    }
-                                }}>
-                                    <SelectTrigger className="w-[120px]">
-                                        <SelectValue placeholder="Language" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="en">English</SelectItem>
-                                        <SelectItem value="hi">Hindi</SelectItem>
-                                        <SelectItem value="bn">Bengali</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
                         {currentChatMessages.map((msg, index) => (
                             <div key={index} className={`flex gap-4 items-start w-full`}>
                                 {msg.role === 'model' && <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
@@ -280,43 +274,46 @@ export function SymptomChecker() {
             <div className="px-4 py-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
                 <div className="max-w-3xl mx-auto">
                     <form ref={formRef} action={handleFormAction} className="relative">
-                        {!currentChatId && (
-                             <div className="flex justify-start mb-2">
-                                <Select value={language} onValueChange={(value: 'en' | 'hi' | 'bn') => setLanguage(value)}>
-                                    <SelectTrigger className="w-[120px]">
-                                        <SelectValue placeholder="Language" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="en">English</SelectItem>
-                                        <SelectItem value="hi">Hindi</SelectItem>
-                                        <SelectItem value="bn">Bengali</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
-                        <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
-                        <input type="hidden" name="language" value={currentLanguage} />
-                        <Textarea
-                            id="symptoms"
-                            name="symptoms"
-                            placeholder="Describe your symptoms..."
-                            className="min-h-[52px] text-base pr-12 resize-none"
-                            required
-                            value={symptoms}
-                            onChange={(e) => setSymptoms(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                formRef.current?.requestSubmit();
-                                }
-                            }}
-                        />
+                        <div className="flex items-end gap-2">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="shrink-0">
+                                        <Languages className="h-5 w-5" />
+                                        <span className="sr-only">Select Language</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-1">
+                                    <div className="flex flex-col gap-1">
+                                        <Button variant={currentLanguage === 'en' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('en')} className="justify-start">English</Button>
+                                        <Button variant={currentLanguage === 'hi' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('hi')} className="justify-start">Hindi</Button>
+                                        <Button variant={currentLanguage === 'bn' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('bn')} className="justify-start">Bengali</Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
+                            <input type="hidden" name="language" value={currentLanguage} />
+                            <Textarea
+                                id="symptoms"
+                                name="symptoms"
+                                placeholder="Describe your symptoms..."
+                                className="min-h-[52px] text-base pr-12 resize-none"
+                                required
+                                value={symptoms}
+                                onChange={(e) => setSymptoms(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    formRef.current?.requestSubmit();
+                                    }
+                                }}
+                            />
+                             <SubmitButton />
+                        </div>
                         {state.errors?.symptoms && (
                             <p className="text-sm text-destructive mt-1">
                                 {state.errors.symptoms[0]}
                             </p>
                         )}
-                        <SubmitButton />
                     </form>
                      <p className="text-xs text-center text-muted-foreground mt-2">
                         HealthNova AI can make mistakes. Consider checking important information.
@@ -327,3 +324,5 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
+
+    
