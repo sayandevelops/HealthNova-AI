@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
-  chatHistory: { role: 'user' | 'model', content: { text: string }[] | string }[];
+  chatHistory: { role: 'user' | 'model', content: string }[];
 };
 
 export function AIResponse({ response, isStreaming = false, chatHistory }: AIResponseProps) {
@@ -22,7 +22,6 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
   const handlePlayAudio = async () => {
     if (audioState === 'loading') return;
 
-    // If audio is already playing, stop it
     if (audioRef.current && audioState === 'playing') {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -39,18 +38,18 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
         throw new Error(result.error);
       }
       
-      if (audioRef.current) {
-        audioRef.current.src = result.audio;
-      } else {
-        audioRef.current = new Audio(result.audio);
-      }
-
-      audioRef.current.play();
+      const audio = audioRef.current || new Audio();
+      audio.src = result.audio;
+      audio.play();
       setAudioState('playing');
 
-      audioRef.current.onended = () => {
+      audio.onended = () => {
         setAudioState('idle');
       };
+      
+      if (!audioRef.current) {
+        audioRef.current = audio;
+      }
 
     } catch (error) {
       console.error(error);
