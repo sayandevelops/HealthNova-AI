@@ -93,11 +93,8 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
 
   return (
     <div className="flex h-screen w-full bg-background">
-      <div className="hidden md:flex md:w-[var(--sidebar-width)] md:flex-col md:fixed md:inset-y-0 z-40 border-r">
-        {sidebarContent}
-      </div>
-      <div className="flex flex-col flex-1 md:pl-[var(--sidebar-width)]">
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 md:hidden sticky top-0 z-30">
+      <div className="flex flex-col flex-1">
+        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 sticky top-0 z-30">
           <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <SheetTrigger asChild>
               <Button size="icon" variant="outline">
