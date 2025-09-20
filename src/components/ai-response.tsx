@@ -1,8 +1,12 @@
 
 "use client";
 
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Leaf } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Leaf, Volume2, LoaderCircle } from "lucide-react";
+import { getAudio } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
 
 type AIResponseProps = {
   response: string | null;
@@ -11,6 +15,53 @@ type AIResponseProps = {
 };
 
 export function AIResponse({ response, isStreaming = false, chatHistory }: AIResponseProps) {
+  const [audioState, setAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
+
+  const handlePlayAudio = async () => {
+    if (audioState === 'loading') return;
+
+    // If audio is already playing, stop it
+    if (audioRef.current && audioState === 'playing') {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setAudioState('idle');
+        return;
+    }
+
+    if (!response) return;
+
+    setAudioState('loading');
+    try {
+      const result = await getAudio(response);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+      
+      if (audioRef.current) {
+        audioRef.current.src = result.audio;
+      } else {
+        audioRef.current = new Audio(result.audio);
+      }
+
+      audioRef.current.play();
+      setAudioState('playing');
+
+      audioRef.current.onended = () => {
+        setAudioState('idle');
+      };
+
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Audio Error",
+        description: "Could not generate audio for this message.",
+        variant: "destructive",
+      });
+      setAudioState('idle');
+    }
+  };
 
   if (isStreaming) {
     return (
@@ -87,9 +138,22 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
   const isCardWrapped = chatHistory.length === 0;
   
   const content = (
+    <div className="space-y-4">
       <div className="prose prose-blue max-w-none text-base leading-relaxed">
         {renderContent()}
       </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handlePlayAudio}
+        aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
+        disabled={audioState === 'loading'}
+        className="mt-2"
+      >
+        {audioState === 'loading' && <LoaderCircle className="h-5 w-5 animate-spin" />}
+        {audioState !== 'loading' && <Volume2 className="h-5 w-5" />}
+      </Button>
+    </div>
   );
 
   if (isCardWrapped) {

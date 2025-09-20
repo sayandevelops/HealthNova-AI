@@ -2,9 +2,10 @@
 "use server";
 
 import { symptomChecker, type ChatHistory } from "@/ai/flows/symptom-checker";
+import { textToSpeech } from "@/ai/flows/text-to-speech";
 import { z } from "zod";
 
-const actionSchema = z.object({
+const symptomActionSchema = z.object({
   symptoms: z.string().min(1, "Please enter a message.").max(1000, "Please keep your message under 1000 characters."),
   language: z.enum(["en", "hi", "bn"]),
   history: z.string().optional(),
@@ -33,7 +34,7 @@ export async function getHealthAdvice(
     history: formData.get("history"),
   };
 
-  const validatedFields = actionSchema.safeParse(rawFormData);
+  const validatedFields = symptomActionSchema.safeParse(rawFormData);
 
   if (!validatedFields.success) {
     return {
@@ -73,5 +74,22 @@ export async function getHealthAdvice(
       errors: null,
       data: null,
     };
+  }
+}
+
+const ttsActionSchema = z.string().min(1, "Text cannot be empty.").max(2000, "Text is too long for audio conversion.");
+
+export async function getAudio(text: string): Promise<{ audio: string } | { error: string }> {
+  const validatedText = ttsActionSchema.safeParse(text);
+  if (!validatedText.success) {
+    return { error: "Invalid text provided." };
+  }
+
+  try {
+    const result = await textToSpeech(validatedText.data);
+    return { audio: result.audio };
+  } catch (error) {
+    console.error("TTS Error:", error);
+    return { error: "Failed to generate audio. Please try again." };
   }
 }
