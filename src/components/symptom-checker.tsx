@@ -77,7 +77,6 @@ export function SymptomChecker() {
     } catch (e) {
       console.error("Failed to load chat history from local storage:", e);
     }
-    // Set current chat to null on initial load
     setCurrentChatId(null);
   }, []);
 
@@ -98,6 +97,8 @@ export function SymptomChecker() {
 
   // Handle form submission response
   useEffect(() => {
+    if (isFormPending) return;
+
     if (state.message === "Success" && state.data) {
         const lastUserMessageContent = state.data.history.findLast(m => m.role === 'user')?.content[0].text ?? '';
         
@@ -127,7 +128,6 @@ export function SymptomChecker() {
         });
 
         setSymptoms('');
-        // Do not reset the form, to retain hidden input values.
     } else if (state.message && !["Success", "Invalid form data."].includes(state.message)) {
         toast({
             title: "Error",
@@ -135,7 +135,8 @@ export function SymptomChecker() {
             variant: "destructive",
         });
     }
-  }, [state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, isFormPending]);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -160,20 +161,21 @@ export function SymptomChecker() {
     setCurrentChatId(null);
     setSymptoms('');
     setLanguage('en');
+    (formRef.current as HTMLFormElement)?.reset();
   }
 
   const handleDeleteChat = (idToDelete: string) => {
     setChatHistory(prev => {
         const newHistory = prev.filter(chat => chat.id !== idToDelete);
         if (currentChatId === idToDelete) {
-          setCurrentChatId(null);
-          setLanguage('en');
+          handleNewChat();
         }
         return newHistory;
       });
   };
 
   const handleSelectChat = (id: string) => {
+    if (isFormPending) return;
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -195,6 +197,8 @@ export function SymptomChecker() {
 
   const handleFormAction = (formData: FormData) => {
     if(symptoms.trim() === '') return;
+    const genkitHistory = currentChat ? currentChat.messages.map(m => ({role: m.role, content: [{text: m.content}]})) : [];
+    formData.set('history', JSON.stringify(genkitHistory));
     formAction(formData);
   };
   
@@ -204,6 +208,8 @@ export function SymptomChecker() {
         setChatHistory(prev => prev.map(chat => chat.id === currentChatId ? {...chat, language: value} : chat));
     }
   };
+
+  const userMessageContent = symptoms;
 
   return (
     <AppLayout
@@ -241,7 +247,7 @@ export function SymptomChecker() {
                             <div key={index} className={`flex gap-4 items-start w-full`}>
                                 {msg.role === 'model' && <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                                  {msg.role === 'user' && <div className="flex-grow"></div>}
-                                <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card border'}`}>
+                                <div className={`p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-lg' : ''}`}>
                                     {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={historyForForm} audioRef={audioRef} />}
                                 </div>
                                 {msg.role === 'user' && <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
@@ -251,7 +257,7 @@ export function SymptomChecker() {
                              <div className={`flex gap-4 items-start w-full`}>
                                 <div className="flex-grow"></div>
                                 <div className={`rounded-lg p-3 max-w-[85%] bg-primary text-primary-foreground`}>
-                                    <p>{symptoms}</p>
+                                    <p>{userMessageContent}</p>
                                 </div>
                                 <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
                             </div>
@@ -259,7 +265,7 @@ export function SymptomChecker() {
                         {isFormPending && (
                             <div className="flex gap-4 items-start justify-start w-full">
                                 <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
-                                <div className="rounded-lg p-3 max-w-[85%] bg-card border">
+                                <div className="rounded-lg p-3 max-w-[85%]">
                                     <AIResponse response={null} isStreaming={true} chatHistory={[]} audioRef={audioRef} />
                                 </div>
                             </div>
@@ -288,7 +294,6 @@ export function SymptomChecker() {
                                     </div>
                                 </PopoverContent>
                             </Popover>
-                            <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
                             <input type="hidden" name="language" value={currentLanguage} />
                             <Textarea
                                 id="symptoms"
@@ -300,8 +305,10 @@ export function SymptomChecker() {
                                 onChange={(e) => setSymptoms(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    formRef.current?.requestSubmit();
+                                      e.preventDefault();
+                                      if(!isFormPending) {
+                                        formRef.current?.requestSubmit();
+                                      }
                                     }
                                 }}
                             />
@@ -322,3 +329,5 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
+
+    
