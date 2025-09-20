@@ -4,7 +4,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Leaf } from "lucide-react";
-import type { ChatHistory } from "@/ai/flows/symptom-checker";
 
 type AIResponseProps = {
   response: string | null;
@@ -63,11 +62,11 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
               <p className="font-medium">{line.replace('🌿 Ayurvedic Tip:', '').trim()}</p>
             </div>
           );
-        } else if (line.toLowerCase().startsWith('disclaimer:')) {
+        } else if (line.toLowerCase().includes('disclaimer')) {
            elements.push(
             <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-yellow-700 dark:text-yellow-400 text-xs">
               <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <p className="font-semibold">{line}</p>
+              <p className="font-semibold">{line.replace(/\*\*/g, '')}</p>
             </div>
           );
         } else {
