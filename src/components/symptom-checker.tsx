@@ -89,9 +89,9 @@ export function SymptomChecker() {
   const historyForForm = state.data?.history ?? [];
 
   return (
-    <div className="container mx-auto px-0 sm:px-4 py-4 md:py-12">
+    <div className="container mx-auto px-0 sm:px-4 py-0 sm:py-4 md:py-12">
       <div className="mx-auto max-w-3xl">
-        <Card className="shadow-lg transition-all duration-300 hover:shadow-xl rounded-none sm:rounded-lg">
+        <Card className="shadow-lg transition-all duration-300 hover:shadow-xl rounded-none sm:rounded-lg sm:border-t-0">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ export function SymptomChecker() {
                </div>
             )}
             
-            <div className="space-y-4 max-h-[60dvh] overflow-y-auto pr-4 mb-4" ref={chatContainerRef}>
+            <div className="space-y-4 max-h-[70dvh] overflow-y-auto pr-2 sm:pr-4 mb-4" ref={chatContainerRef}>
                 {chatHistory.map((msg, index) => (
                     <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                        {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
@@ -150,7 +150,7 @@ export function SymptomChecker() {
                 <Textarea
                   id="symptoms"
                   name="symptoms"
-                  placeholder={chatHistory.length === 0 ? "Describe your symptoms for health advice..." : "e.g., What are some home remedies?"}
+                  placeholder={chatHistory.length === 0 ? "Describe your symptoms..." : "e.g., What are some home remedies?"}
                   className="min-h-[100px] text-base"
                   required
                   value={symptoms}
