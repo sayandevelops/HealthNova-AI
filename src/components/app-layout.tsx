@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Children, isValidElement, cloneElement, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,23 @@ type AppLayoutProps = {
     onDeleteChat?: (id: string) => void;
 };
 
-export function AppLayout({ children, chatHistory = [], currentChatId, onSelectChat, onNewChat, onDeleteChat }: AppLayoutProps) {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const child = Children.only(children);
+  const layoutProps = useMemo(() => {
+    if (isValidElement(child) && typeof child.props.datAappLayouTprops === 'string') {
+      try {
+        return JSON.parse(child.props.datAappLayouTprops);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return {} as AppLayoutProps;
+  }, [child]);
+
+  const { chatHistory = [], currentChatId, onSelectChat, onNewChat, onDeleteChat } = layoutProps;
 
   const handleSelectChat = (id: string) => {
     onSelectChat?.(id);
@@ -31,7 +45,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
     onNewChat?.();
     setIsSidebarOpen(false);
   }
-
+  
   const sidebarContent = (
     <div className="flex flex-col h-full bg-card text-card-foreground">
       <div className="p-4 border-b">
@@ -42,7 +56,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
         <p className="px-3 py-2 text-xs font-semibold text-muted-foreground">Chat History</p>
-        {chatHistory.map((chat) => (
+        {chatHistory.map((chat: ChatThread) => (
           <div key={chat.id} className="flex items-center group">
             <Button
               variant={currentChatId === chat.id ? "secondary" : "ghost"}
@@ -91,6 +105,14 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
     </div>
   );
 
+  const childWithProps = isValidElement(child) ? cloneElement(child, {
+    chatHistory,
+    currentChatId,
+    onSelectChat,
+    onNewChat,
+    onDeleteChat
+  } as any) : child;
+
   return (
     <div className="flex h-screen w-full bg-background">
       <div className="flex flex-col flex-1">
@@ -111,7 +133,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
             <span className="font-headline">MedAid AI</span>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">{childWithProps}</main>
       </div>
     </div>
   );

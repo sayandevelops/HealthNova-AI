@@ -186,13 +186,13 @@ export function SymptomChecker() {
   };
 
   return (
-    <AppLayout
-        chatHistory={chatHistory}
-        currentChatId={currentChatId}
-        onSelectChat={setCurrentChatId}
-        onNewChat={handleNewChat}
-        onDeleteChat={handleDeleteChat}
-    >
+    <div data-app-layout-props={JSON.stringify({
+        chatHistory: chatHistory,
+        currentChatId: currentChatId,
+        onSelectChat: setCurrentChatId,
+        onNewChat: handleNewChat,
+        onDeleteChat: handleDeleteChat
+    })}>
         <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
                 {currentChatMessages.length === 0 && !isPending ? (
@@ -273,6 +273,6 @@ export function SymptomChecker() {
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </div>
   );
 }
