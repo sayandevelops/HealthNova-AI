@@ -45,7 +45,11 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       const audioSrc = audioQueueRef.current[currentAudioIndexRef.current];
       if (audioRef.current) {
         audioRef.current.src = audioSrc;
-        audioRef.current.play();
+        audioRef.current.play().catch(e => {
+            console.error("Audio play failed:", e);
+            toast({ title: "Audio Error", description: "Could not play audio.", variant: "destructive" });
+            stopAudio();
+        });
         currentAudioIndexRef.current++;
       }
     } else {
@@ -62,16 +66,15 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
         return;
     }
     
-    stopAudio();
-
     if (!response) return;
 
     setAudioState('loading');
     try {
       // Split response into sentences. This regex is basic and might not cover all edge cases.
-      const sentences = response.match(/[^.!?]+[.!?]*/g) || [response];
+      const sentences = response.match(/[^.!?]+[.!?\s]*/g)?.filter(s => s.trim()) || [response];
       
       const result = await getAudio(sentences);
+
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -79,10 +82,11 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       audioQueueRef.current = result.audio;
       currentAudioIndexRef.current = 0;
 
-      const audio = audioRef.current || new Audio();
-      audioRef.current = audio;
-
-      audio.onended = playNextInQueue;
+      if (!audioRef.current) {
+        const audio = new Audio();
+        audioRef.current = audio;
+        audio.onended = playNextInQueue;
+      }
       
       setAudioState('playing');
       playNextInQueue();
@@ -91,7 +95,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       console.error(error);
       toast({
         title: "Audio Error",
-        description: "Could not generate audio for this message.",
+        description: error instanceof Error ? error.message : "Could not generate audio for this message.",
         variant: "destructive",
       });
       stopAudio();
