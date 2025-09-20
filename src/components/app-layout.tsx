@@ -10,8 +10,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Home, Info } from 'lucide-react';
+import { Home, Info, LifeBuoy } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from './header';
@@ -23,7 +24,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          {/* The logo and title are now in the Header component */}
+          <div className="flex items-center justify-between p-2">
+            <div className="flex items-center gap-2">
+              <LifeBuoy className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold tracking-tight font-headline">
+                HealthNova AI
+              </span>
+            </div>
+            <div className="hidden md:block">
+              <SidebarTrigger />
+            </div>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
