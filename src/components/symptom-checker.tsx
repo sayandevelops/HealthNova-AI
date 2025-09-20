@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useFormStatus, useFormState } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { useEffect, useRef, useState, useActionState } from "react";
 import { getHealthAdvice, type FormState } from "@/app/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ const exampleSymptoms = [
 const LOCAL_STORAGE_KEY = 'healthnova-chat-history';
 
 export function SymptomChecker() {
-  const [state, formAction] = useFormState(getHealthAdvice, initialState);
+  const [state, formAction] = useActionState(getHealthAdvice, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
