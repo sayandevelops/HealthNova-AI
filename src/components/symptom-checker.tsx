@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AIResponse } from "@/components/ai-response";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HeartPulse, User, Bot } from "lucide-react";
+import { HeartPulse, User, Bot, RefreshCcw } from "lucide-react";
 
 type ChatMessage = {
     role: 'user' | 'model';
@@ -41,7 +41,7 @@ const exampleSymptoms = [
 ];
 
 export function SymptomChecker() {
-  const [state, formAction] = useActionState(getHealthAdvice, initialState);
+  const [state, formAction, isPending] = useActionState(getHealthAdvice, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
@@ -75,6 +75,17 @@ export function SymptomChecker() {
     }, 0);
   }
 
+  const handleReset = () => {
+    setChatHistory([]);
+    setSymptoms('');
+    // To fully reset the form state, we can reset the form element itself
+    formRef.current?.reset(); 
+    // We also clear the `state` from useActionState by re-setting the page or relevant part, here we just clear history
+    state.message = null;
+    state.errors = null;
+    state.data = null;
+  }
+
   const historyForForm = state.data?.history ?? [];
 
   return (
@@ -82,11 +93,18 @@ export function SymptomChecker() {
       <div className="mx-auto max-w-3xl">
         <Card className="shadow-lg transition-all duration-300 hover:shadow-xl">
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <HeartPulse className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl md:text-3xl font-headline">
-                Symptom Checker
-              </CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <HeartPulse className="h-8 w-8 text-primary" />
+                <CardTitle className="text-2xl md:text-3xl font-headline">
+                  Symptom Checker
+                </CardTitle>
+              </div>
+              {chatHistory.length > 0 && (
+                <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reset chat">
+                  <RefreshCcw className="h-5 w-5" />
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -113,7 +131,7 @@ export function SymptomChecker() {
                         {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
                     </div>
                 ))}
-                {useFormStatus().pending && (
+                {isPending && (
                      <div className="flex gap-3 justify-start">
                         <Bot className="h-6 w-6 text-primary flex-shrink-0" />
                         <div className="rounded-lg p-3 max-w-[85%] bg-muted">
@@ -140,7 +158,7 @@ export function SymptomChecker() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        if (!useFormStatus().pending) {
+                        if (!isPending) {
                             formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
                         }
                     }
@@ -181,7 +199,8 @@ export function SymptomChecker() {
           </CardContent>
         </Card>
         
-        {chatHistory.length === 0 && <AIResponse response={state.data?.response ?? null} isStreaming={useFormStatus().pending} chatHistory={chatHistory} />}
+        {chatHistory.length === 0 && !isPending && <AIResponse response={state.data?.response ?? null} isStreaming={false} chatHistory={chatHistory} />}
+        {isPending && chatHistory.length === 0 && <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} />}
 
       </div>
     </div>

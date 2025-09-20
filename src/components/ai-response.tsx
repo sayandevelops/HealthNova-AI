@@ -8,7 +8,7 @@ import { AlertCircle, Leaf } from "lucide-react";
 type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
-  chatHistory: { role: 'user' | 'model', content: { text: string }[] }[];
+  chatHistory: { role: 'user' | 'model', content: { text: string }[] | string }[];
 };
 
 export function AIResponse({ response, isStreaming = false, chatHistory }: AIResponseProps) {
@@ -42,23 +42,20 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
         listItems = [];
       }
     };
+    
+    const disclaimerRegex = /^(?:\d+\.\s*)?(?:\*\*)?Disclaimer(?:\*\*)?:/i;
   
     lines.forEach((line, index) => {
-      // Regular expression to find "Disclaimer" at the beginning of a line, ignoring optional numbering and markdown.
-      const disclaimerRegex = /^(?:\d+\.\s*)?(?:\*\*)?Disclaimer(?:\*\*)?:/i;
-
-      if (line.match(/^\d+\.\s*/) || line.match(/^\s*-\s*/) || line.match(/^\s*\*\s*/)) {
-         if (disclaimerRegex.test(line)) {
-          flushList();
-           elements.push(
-            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-yellow-700 dark:text-yellow-400 text-xs">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <p className="font-semibold">{line.replace(disclaimerRegex, 'Disclaimer:')}</p>
-            </div>
-          );
-        } else {
-            listItems.push(line.replace(/^\d+\.\s*|^\s*-\s*|^\s*\*\s*/, ''));
-        }
+      if (disclaimerRegex.test(line)) {
+        flushList();
+        elements.push(
+          <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="font-semibold">{line.replace(disclaimerRegex, 'Disclaimer:')}</p>
+          </div>
+        );
+      } else if (line.match(/^\d+\.\s*/) || line.match(/^\s*-\s*/) || line.match(/^\s*\*\s*/)) {
+          listItems.push(line.replace(/^\d+\.\s*|^\s*-\s*|^\s*\*\s*/, ''));
       } else {
         flushList();
         if (line.startsWith('⚠️')) {
@@ -75,13 +72,6 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
               <p className="font-medium">{line.replace('🌿 Ayurvedic Tip:', '').trim()}</p>
             </div>
           );
-        } else if (disclaimerRegex.test(line)) {
-           elements.push(
-            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-yellow-700 dark:text-yellow-400 text-xs">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <p className="font-semibold">{line.replace(disclaimerRegex, 'Disclaimer:')}</p>
-            </div>
-          );
         } else {
            elements.push(<p key={index} className="my-2">{line.replace(/\*\*/g, '')}</p>);
         }
@@ -93,7 +83,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
     return elements;
   };
   
-  const isCardWrapped = chatHistory.length === 0
+  const isCardWrapped = chatHistory.length === 0;
   
   const content = (
       <div className="prose prose-blue max-w-none text-base leading-relaxed">
