@@ -70,15 +70,14 @@ export function SymptomChecker() {
       const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory) as ChatThread[];
-        setChatHistory(parsedHistory);
+        if (Array.isArray(parsedHistory)) {
+          setChatHistory(parsedHistory);
+        }
       }
     } catch (e) {
       console.error("Failed to load chat history from local storage:", e);
     }
-  }, []);
-
-  // Set currentChatId to null on first load/refresh
-  useEffect(() => {
+    // Set current chat to null on initial load
     setCurrentChatId(null);
   }, []);
 
@@ -129,8 +128,7 @@ export function SymptomChecker() {
 
         setSymptoms('');
         // Do not reset the form, to retain hidden input values.
-        // formRef.current?.reset();
-    } else if (state.message && state.message !== "Success" && state.message !== "Invalid form data.") {
+    } else if (state.message && !["Success", "Invalid form data."].includes(state.message)) {
         toast({
             title: "Error",
             description: state.message,
@@ -166,13 +164,13 @@ export function SymptomChecker() {
 
   const handleDeleteChat = (idToDelete: string) => {
     setChatHistory(prev => {
-      const newHistory = prev.filter(chat => chat.id !== idToDelete);
-      if (currentChatId === idToDelete) {
-        setCurrentChatId(null); // Go to new chat view
-        setLanguage('en');
-      }
-      return newHistory;
-    });
+        const newHistory = prev.filter(chat => chat.id !== idToDelete);
+        if (currentChatId === idToDelete) {
+          setCurrentChatId(null);
+          setLanguage('en');
+        }
+        return newHistory;
+      });
   };
 
   const handleSelectChat = (id: string) => {
@@ -274,15 +272,15 @@ export function SymptomChecker() {
             <div className="px-4 py-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
                 <div className="max-w-3xl mx-auto">
                     <form ref={formRef} action={handleFormAction} className="relative">
-                        <div className="flex items-end gap-2">
-                             <Popover>
+                        <div className="relative flex items-center">
+                            <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="shrink-0">
+                                    <Button variant="ghost" size="icon" className="absolute left-2.5 bottom-2.5 h-8 w-8">
                                         <Languages className="h-5 w-5" />
                                         <span className="sr-only">Select Language</span>
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-1">
+                                <PopoverContent className="w-auto p-1 mb-2">
                                     <div className="flex flex-col gap-1">
                                         <Button variant={currentLanguage === 'en' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('en')} className="justify-start">English</Button>
                                         <Button variant={currentLanguage === 'hi' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('hi')} className="justify-start">Hindi</Button>
@@ -296,7 +294,7 @@ export function SymptomChecker() {
                                 id="symptoms"
                                 name="symptoms"
                                 placeholder="Describe your symptoms..."
-                                className="min-h-[52px] text-base pr-12 resize-none"
+                                className="min-h-[52px] text-base pl-12 pr-12 resize-none"
                                 required
                                 value={symptoms}
                                 onChange={(e) => setSymptoms(e.target.value)}
@@ -307,7 +305,7 @@ export function SymptomChecker() {
                                     }
                                 }}
                             />
-                             <SubmitButton />
+                            <SubmitButton />
                         </div>
                         {state.errors?.symptoms && (
                             <p className="text-sm text-destructive mt-1">
@@ -324,5 +322,3 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
-
-    
