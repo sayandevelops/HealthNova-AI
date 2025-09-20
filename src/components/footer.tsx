@@ -12,6 +12,9 @@ export function Footer() {
         <p className="text-xs mt-4">
           &copy; {new Date().getFullYear()} MedAid AI. All Rights Reserved.
         </p>
+        <p className="text-xs mt-2">
+          Made by <a href="https://github.com/sayandevelops" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">sayandevelops</a>
+        </p>
       </div>
     </footer>
   );
