@@ -138,20 +138,22 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
   
   const content = (
     <div className="space-y-4">
+      <div className="flex justify-start mb-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handlePlayAudio}
+          aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
+          disabled={audioState === 'loading'}
+          className="h-8 w-8"
+        >
+          {audioState === 'loading' && <LoaderCircle className="h-5 w-5 animate-spin" />}
+          {audioState !== 'loading' && <Volume2 className="h-5 w-5" />}
+        </Button>
+      </div>
       <div className="prose prose-blue max-w-none text-base leading-relaxed">
         {renderContent()}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handlePlayAudio}
-        aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
-        disabled={audioState === 'loading'}
-        className="mt-2"
-      >
-        {audioState === 'loading' && <LoaderCircle className="h-5 w-5 animate-spin" />}
-        {audioState !== 'loading' && <Volume2 className="h-5 w-5" />}
-      </Button>
     </div>
   );
 
