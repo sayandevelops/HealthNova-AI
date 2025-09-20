@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { HeartPulse, User, Bot, RefreshCcw, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLayout } from "./app-layout";
+import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
 
 type ChatMessage = {
     role: 'user' | 'model';
@@ -64,7 +65,7 @@ export function SymptomChecker() {
     try {
       const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedHistory) {
-        const parsedHistory = JSON.parse(savedHistory);
+        const parsedHistory = JSON.parse(savedHistory) as ChatThread[];
         setChatHistory(parsedHistory);
         if (parsedHistory.length > 0 && !currentChatId) {
             setCurrentChatId(parsedHistory[0].id);
@@ -77,15 +78,15 @@ export function SymptomChecker() {
 
   // Save chat history to local storage whenever it changes
   useEffect(() => {
-    if (chatHistory.length > 0) {
       try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(chatHistory));
+        if (chatHistory.length > 0) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(chatHistory));
+        } else {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
       } catch (e) {
         console.error("Failed to save chat history to local storage:", e);
       }
-    } else {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-    }
   }, [chatHistory]);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -113,11 +114,11 @@ export function SymptomChecker() {
                 const newChatId = new Date().toISOString();
                 const newChat: ChatThread = {
                     id: newChatId,
-                    title: userContent.substring(0, 30), // Use first 30 chars as title
+                    title: userContent.substring(0, 40) + (userContent.length > 40 ? '...' : ''),
                     messages: newMessages
                 };
                 setCurrentChatId(newChatId);
-                return [...prevHistory, newChat];
+                return [newChat, ...prevHistory];
             }
         });
         setSymptoms('');
@@ -149,34 +150,39 @@ export function SymptomChecker() {
     }
     setCurrentChatId(null);
     setSymptoms('');
-    state.message = null;
-    state.errors = null;
-    state.data = null;
+    // Manually reset the form state
+    initialState.data = null;
+    initialState.errors = null;
+    initialState.message = null;
   }
 
   const handleDeleteChat = (id: string) => {
-    setChatHistory(prev => prev.filter(chat => chat.id !== id));
-    if (currentChatId === id) {
-        // If we deleted the active chat, select the first one or start a new chat
-        const remainingChats = chatHistory.filter(chat => chat.id !== id);
-        if (remainingChats.length > 0) {
-            setCurrentChatId(remainingChats[0].id);
-        } else {
-            handleNewChat();
+    setChatHistory(prev => {
+        const newHistory = prev.filter(chat => chat.id !== id);
+        if (currentChatId === id) {
+            // If we deleted the active chat, select the first one or start a new chat
+            if (newHistory.length > 0) {
+                setCurrentChatId(newHistory[0].id);
+            } else {
+                handleNewChat();
+            }
         }
-    }
+        return newHistory;
+    });
   };
 
   const currentChatMessages = chatHistory.find(chat => chat.id === currentChatId)?.messages ?? [];
-  const historyForForm = currentChatMessages.map(msg => ({
+  const historyForForm: GenkitChatHistory = currentChatMessages.map(msg => ({
       role: msg.role,
       content: [{ text: msg.content }]
   }));
 
   const handleFormAction = (formData: FormData) => {
-      startTransition(() => {
-          formAction(formData);
-      });
+    if (isPending) return;
+    startTransition(() => {
+        if(symptoms.trim() === '') return;
+        formAction(formData);
+    });
   };
 
   return (
@@ -212,27 +218,29 @@ export function SymptomChecker() {
                 ) : (
                     <div className="max-w-3xl mx-auto py-6 px-4 space-y-6">
                         {currentChatMessages.map((msg, index) => (
-                            <div key={index} className={`flex gap-4 items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div key={index} className={`flex gap-4 items-start w-full`}>
                                 {msg.role === 'model' && <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
+                                 {msg.role === 'user' && <div className="flex-grow"></div>}
                                 <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card border'}`}>
-                                    {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={currentChatMessages.map(m => ({...m, content: m.content || ''}))} audioRef={audioRef} />}
+                                    {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={historyForForm} audioRef={audioRef} />}
                                 </div>
                                 {msg.role === 'user' && <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                             </div>
                         ))}
                         {isPending && (
-                            <div className="flex gap-4 items-start justify-start">
+                            <div className="flex gap-4 items-start justify-start w-full">
                                 <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
                                 <div className="rounded-lg p-3 max-w-[85%] bg-card border">
                                     <AIResponse response={null} isStreaming={true} chatHistory={[]} audioRef={audioRef} />
                                 </div>
                             </div>
                         )}
+                       <div className="h-24" /> {/* Spacer for bottom padding */}
                     </div>
                 )}
             </div>
             
-            <div className="px-4 pb-4 bg-background sticky bottom-0">
+            <div className="px-4 py-4 bg-background/80 backdrop-blur-sm sticky bottom-0">
                 <div className="max-w-3xl mx-auto">
                     <form ref={formRef} action={handleFormAction} className="relative">
                         <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
@@ -248,9 +256,7 @@ export function SymptomChecker() {
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
-                                if (!isPending) {
-                                    formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
-                                }
+                                formRef.current?.requestSubmit();
                                 }
                             }}
                         />
@@ -261,6 +267,9 @@ export function SymptomChecker() {
                         )}
                         <SubmitButton />
                     </form>
+                     <p className="text-xs text-center text-muted-foreground mt-2">
+                        MedAid AI can make mistakes. Consider checking important information.
+                    </p>
                 </div>
             </div>
         </div>

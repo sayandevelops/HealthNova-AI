@@ -64,6 +64,9 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
             </Button>
           </div>
         ))}
+        {chatHistory.length === 0 && (
+            <p className="px-3 text-sm text-muted-foreground">No chats yet.</p>
+        )}
       </nav>
       <div className="mt-auto p-4 border-t space-y-2">
          <Link
@@ -90,7 +93,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
 
   return (
     <div className="flex h-screen w-full bg-background">
-      <div className="hidden md:flex md:w-[var(--sidebar-width)] md:flex-col md:fixed md:inset-y-0 z-40">
+      <div className="hidden md:flex md:w-[var(--sidebar-width)] md:flex-col md:fixed md:inset-y-0 z-40 border-r">
         {sidebarContent}
       </div>
       <div className="flex flex-col flex-1 md:pl-[var(--sidebar-width)]">

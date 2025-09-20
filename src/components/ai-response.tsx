@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Leaf, Volume2, LoaderCircle } from "lucide-react";
 import { getAudio } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
+import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
 
 type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
-  chatHistory: { role: 'user' | 'model', content: string }[];
+  chatHistory: GenkitChatHistory;
   audioRef: React.MutableRefObject<HTMLAudioElement | null>;
 };
 
@@ -58,6 +59,8 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       }
       
       const audio = audioRef.current || new Audio();
+      audioRef.current = audio;
+
       audio.src = result.audio;
       audio.play();
       setAudioState('playing');
@@ -72,9 +75,6 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
         }
       }
       
-      if (!audioRef.current) {
-        audioRef.current = audio;
-      }
 
     } catch (error) {
       console.error(error);
@@ -89,7 +89,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
 
   if (isStreaming) {
     return (
-       <div className="flex items-center space-x-2">
+       <div className="flex items-center space-x-2 p-4">
           <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce [animation-delay:-0.32s]"></span>
           <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce [animation-delay:-0.16s]"></span>
           <span className="h-2 w-2 bg-primary rounded-full animate-typing-bounce"></span>
@@ -166,7 +166,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     return elements;
   };
   
-  const isCardWrapped = chatHistory.length === 0;
+  const isInitialMessage = chatHistory.length <= 2;
   
   const content = (
     <div className="space-y-4">
@@ -189,7 +189,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
     </div>
   );
 
-  if (isCardWrapped) {
+  if (isInitialMessage) {
     return (
         <Card className="mt-8 animate-in fade-in-50 duration-500">
           <CardHeader>

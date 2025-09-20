@@ -44,7 +44,16 @@ export async function getHealthAdvice(
     };
   }
   
-  const history: ChatHistory = validatedFields.data.history ? JSON.parse(validatedFields.data.history) : [];
+  let history: ChatHistory = [];
+  if (validatedFields.data.history) {
+      try {
+          history = JSON.parse(validatedFields.data.history);
+      } catch (e) {
+          console.error("Failed to parse chat history", e);
+          // Don't fail the request, just proceed with empty history
+      }
+  }
+
 
   try {
     const result = await symptomChecker({
@@ -53,7 +62,7 @@ export async function getHealthAdvice(
       history: history,
     });
     
-    const newHistory = [
+    const newHistory: ChatHistory = [
         ...history,
         { role: 'user' as const, content: [{ text: validatedFields.data.symptoms }] },
         { role: 'model' as const, content: [{ text: result.advice }] },
