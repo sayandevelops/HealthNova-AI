@@ -94,6 +94,85 @@ export function SymptomChecker() {
 
   const historyForForm = state.data?.history ?? [];
 
+  if (chatHistory.length > 0) {
+    return (
+      <div className="flex flex-col h-full max-h-[calc(100dvh-5rem)]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6" ref={chatContainerRef}>
+          {chatHistory.map((msg, index) => (
+            <div key={index} className={`flex gap-3 items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
+              <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={chatHistory} audioRef={audioRef} />}
+              </div>
+              {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
+            </div>
+          ))}
+          {isPending && (
+            <div className="flex gap-3 items-start justify-start">
+              <Bot className="h-6 w-6 text-primary flex-shrink-0" />
+              <div className="rounded-lg p-3 max-w-[85%] bg-muted">
+                <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} audioRef={audioRef} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="p-4 bg-background border-t">
+          <form ref={formRef} action={formAction} className="space-y-4 max-w-3xl mx-auto">
+            <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
+            <Textarea
+              id="symptoms"
+              name="symptoms"
+              placeholder="Ask a follow-up question..."
+              className="min-h-[60px] text-base"
+              required
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!isPending) {
+                    formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
+                  }
+                }
+              }}
+            />
+             {state.errors?.symptoms && (
+                <p className="text-sm text-destructive">
+                  {state.errors.symptoms[0]}
+                </p>
+              )}
+            <div className="flex justify-between items-center">
+               <RadioGroup
+                  name="language"
+                  defaultValue="en"
+                  className="flex flex-row gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="en" id="en-chat" />
+                    <Label htmlFor="en-chat">EN</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="hi" id="hi-chat" />
+                    <Label htmlFor="hi-chat">HI</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="bn" id="bn-chat" />
+                    <Label htmlFor="bn-chat">BN</Label>
+                  </div>
+                </RadioGroup>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reset chat">
+                  <RefreshCcw className="h-5 w-5" />
+                </Button>
+                <SubmitButton />
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-0 sm:px-4 py-0 sm:py-4 md:py-12">
       <div className="mx-auto max-w-3xl">
@@ -106,57 +185,30 @@ export function SymptomChecker() {
                   Symptom Checker
                 </CardTitle>
               </div>
-              {chatHistory.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reset chat">
-                  <RefreshCcw className="h-5 w-5" />
-                </Button>
-              )}
             </div>
           </CardHeader>
           <CardContent>
-            {chatHistory.length === 0 && (
-                 <div className="space-y-3 mb-6">
-                 <Label className="text-base">Need help? Try an example:</Label>
-                 <div className="flex flex-wrap gap-2">
-                    {exampleSymptoms.map(ex => (
-                        <Button key={ex.name} type="button" variant="outline" size="sm" onClick={() => handleExampleClick(ex.symptom)}>
-                            {ex.name}
-                        </Button>
-                    ))}
-                 </div>
-               </div>
-            )}
-            
-            <div className="space-y-4 max-h-[70dvh] overflow-y-auto pr-2 sm:pr-4 mb-4" ref={chatContainerRef}>
-                {chatHistory.map((msg, index) => (
-                    <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                       {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
-                        <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={chatHistory} audioRef={audioRef} />}
-                        </div>
-                        {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
-                    </div>
+            <div className="space-y-3 mb-6">
+             <Label className="text-base">Need help? Try an example:</Label>
+             <div className="flex flex-wrap gap-2">
+                {exampleSymptoms.map(ex => (
+                    <Button key={ex.name} type="button" variant="outline" size="sm" onClick={() => handleExampleClick(ex.symptom)}>
+                        {ex.name}
+                    </Button>
                 ))}
-                {isPending && (
-                     <div className="flex gap-3 justify-start">
-                        <Bot className="h-6 w-6 text-primary flex-shrink-0" />
-                        <div className="rounded-lg p-3 max-w-[85%] bg-muted">
-                           <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} audioRef={audioRef} />
-                        </div>
-                    </div>
-                )}
-            </div>
-
+             </div>
+           </div>
+            
             <form ref={formRef} action={formAction} className="space-y-6">
                <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
               <div className="space-y-2">
                 <Label htmlFor="symptoms" className="text-lg">
-                  {chatHistory.length === 0 ? "How are you feeling?" : "Ask a follow-up question:"}
+                  How are you feeling?
                 </Label>
                 <Textarea
                   id="symptoms"
                   name="symptoms"
-                  placeholder={chatHistory.length === 0 ? "Describe your symptoms..." : "e.g., What are some home remedies?"}
+                  placeholder="Describe your symptoms..."
                   className="min-h-[100px] text-base"
                   required
                   value={symptoms}
@@ -204,11 +256,9 @@ export function SymptomChecker() {
             </form>
           </CardContent>
         </Card>
-        
-        {chatHistory.length === 0 && !isPending && <AIResponse response={state.data?.response ?? null} isStreaming={false} chatHistory={chatHistory} audioRef={audioRef} />}
-        {isPending && chatHistory.length === 0 && <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} audioRef={audioRef} />}
-
       </div>
     </div>
   );
 }
+
+    
