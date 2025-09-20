@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useFormStatus } from "react-dom";
-import { useEffect, useRef, useState, useActionState } from "react";
-import { getHealthAdvice, type FormState } from "@/app/actions";
+import { useFormStatus, useFormState } from "react-dom";
+import { useEffect, useRef, useState } from "react";
+import { getHealthAdvice, type FormState, getText } from "@/app/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AIResponse } from "@/components/ai-response";
 import { useToast } from "@/hooks/use-toast";
-import { HeartPulse, User, Bot, RefreshCcw, Send, Languages } from "lucide-react";
+import { HeartPulse, User, Bot, RefreshCcw, Send, Languages, Mic, MicOff, LoaderCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLayout } from "./app-layout";
 import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
@@ -35,7 +35,7 @@ const initialState: FormState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="icon" disabled={pending} className="absolute right-2.5 bottom-2.5 h-8 w-8">
+    <Button type="submit" size="icon" disabled={pending} className="absolute right-12 bottom-2.5 h-8 w-8">
        {pending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
       <span className="sr-only">Send message</span>
     </Button>
@@ -52,7 +52,7 @@ const exampleSymptoms = [
 const LOCAL_STORAGE_KEY = 'healthnova-chat-history';
 
 export function SymptomChecker() {
-  const [state, formAction] = useActionState(getHealthAdvice, initialState);
+  const [state, formAction] = useFormState(getHealthAdvice, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
@@ -63,6 +63,12 @@ export function SymptomChecker() {
   const [language, setLanguage] = useState<'en' | 'hi' | 'bn'>('en');
 
   const { pending: isFormPending } = useFormStatus();
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Load chat history from local storage on initial render
   useEffect(() => {
@@ -187,6 +193,59 @@ export function SymptomChecker() {
     }
   }
 
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioChunksRef.current = [];
+        stream.getTracks().forEach(track => track.stop()); // Stop the microphone access
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          setIsTranscribing(true);
+          try {
+            const result = await getText(base64Audio);
+            if ('text' in result) {
+              setSymptoms(prev => prev ? `${prev} ${result.text}` : result.text);
+            } else {
+              toast({ title: "Transcription Error", description: result.error, variant: "destructive" });
+            }
+          } catch (error) {
+            console.error("Transcription failed:", error);
+            toast({ title: "Error", description: "Could not transcribe audio.", variant: "destructive" });
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Could not start recording:", error);
+      toast({ title: "Microphone Error", description: "Could not access microphone. Please check permissions.", variant: "destructive" });
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
+
   const currentChat = chatHistory.find(chat => chat.id === currentChatId);
   const currentChatMessages = currentChat?.messages ?? [];
   const historyForForm: GenkitChatHistory = currentChatMessages.map(msg => ({
@@ -221,7 +280,7 @@ export function SymptomChecker() {
     >
         <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
-                {currentChatMessages.length === 0 && !isFormPending ? (
+                {currentChatMessages.length === 0 && !isFormPending && !isRecording && !isTranscribing ? (
                     <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                         <div className="mb-8">
                             <HeartPulse className="h-16 w-16 text-primary mx-auto" />
@@ -298,8 +357,8 @@ export function SymptomChecker() {
                             <Textarea
                                 id="symptoms"
                                 name="symptoms"
-                                placeholder="Describe your symptoms..."
-                                className="min-h-[52px] text-base pl-12 pr-12 resize-none"
+                                placeholder={isRecording ? "Recording..." : "Describe your symptoms or record audio..."}
+                                className="min-h-[52px] text-base pl-12 pr-24 resize-none"
                                 required
                                 value={symptoms}
                                 onChange={(e) => setSymptoms(e.target.value)}
@@ -311,8 +370,23 @@ export function SymptomChecker() {
                                       }
                                     }
                                 }}
+                                disabled={isRecording || isTranscribing}
                             />
-                            <SubmitButton />
+                            <div className="absolute right-2.5 bottom-2.5 flex gap-1">
+                                <SubmitButton />
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant={isRecording ? 'destructive' : 'ghost'}
+                                  onClick={isRecording ? handleStopRecording : handleStartRecording}
+                                  disabled={isFormPending || isTranscribing}
+                                  className="h-8 w-8"
+                                >
+                                  {isTranscribing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : (isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
+                                  <span className="sr-only">{isRecording ? "Stop recording" : "Start recording"}</span>
+                                </Button>
+                            </div>
+
                         </div>
                         {state.errors?.symptoms && (
                             <p className="text-sm text-destructive mt-1">
@@ -329,5 +403,3 @@ export function SymptomChecker() {
     </AppLayout>
   );
 }
-
-    

@@ -3,6 +3,7 @@
 
 import { symptomChecker, type ChatHistory } from "@/ai/flows/symptom-checker";
 import { textToSpeech } from "@/ai/flows/text-to-speech";
+import { speechToText } from "@/ai/flows/speech-to-text";
 import { z } from "zod";
 
 const symptomActionSchema = z.object({
@@ -86,19 +87,38 @@ export async function getHealthAdvice(
   }
 }
 
-const ttsActionSchema = z.string().min(1, "Text cannot be empty.").max(2000, "Text is too long for audio conversion.");
+const ttsActionSchema = z.array(z.string().min(1).max(1000)).min(1).max(100);
 
-export async function getAudio(text: string): Promise<{ audio: string } | { error: string }> {
-  const validatedText = ttsActionSchema.safeParse(text);
+export async function getAudio(chunks: string[]): Promise<{ audio: string[] } | { error: string }> {
+  const validatedText = ttsActionSchema.safeParse(chunks);
   if (!validatedText.success) {
-    return { error: "Invalid text provided." };
+    return { error: "Invalid text provided for audio conversion." };
   }
 
   try {
-    const result = await textToSpeech(validatedText.data);
-    return { audio: result.audio };
+    const audioPromises = validatedText.data.map(text => textToSpeech(text));
+    const results = await Promise.all(audioPromises);
+    const audioDataUris = results.map(r => r.audio);
+    return { audio: audioDataUris };
   } catch (error) {
     console.error("TTS Error:", error);
     return { error: "Failed to generate audio. Please try again." };
+  }
+}
+
+const sttActionSchema = z.string().min(1, "Audio data cannot be empty.");
+
+export async function getText(audio: string): Promise<{ text: string } | { error: string }> {
+  const validatedAudio = sttActionSchema.safeParse(audio);
+  if (!validatedAudio.success) {
+    return { error: "Invalid audio data provided." };
+  }
+
+  try {
+    const result = await speechToText({ audio: validatedAudio.data });
+    return { text: result.text };
+  } catch (error) {
+    console.error("STT Error:", error);
+    return { error: "Failed to transcribe audio. Please try again." };
   }
 }
