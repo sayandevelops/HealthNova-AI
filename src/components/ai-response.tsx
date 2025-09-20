@@ -70,7 +70,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
             </div>
           );
         } else {
-           elements.push(<p key={index} className="my-2">{line}</p>);
+           elements.push(<p key={index} className="my-2">{line.replace(/\*\*/g, '')}</p>);
         }
       }
     });
