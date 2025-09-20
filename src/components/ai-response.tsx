@@ -65,7 +65,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
           );
         } else if (line.toLowerCase().startsWith('disclaimer:')) {
            elements.push(
-            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-destructive text-xs">
+            <div key={index} className="my-4 flex items-start gap-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 text-yellow-700 dark:text-yellow-400 text-xs">
               <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
               <p className="font-semibold">{line}</p>
             </div>
