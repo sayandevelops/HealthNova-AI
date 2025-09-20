@@ -46,7 +46,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
           <div key={chat.id} className="flex items-center group">
             <Button
               variant={currentChatId === chat.id ? "secondary" : "ghost"}
-              className="w-full justify-start gap-2 truncate"
+              className="w-full justify-start gap-2 truncate hover:bg-primary/20"
               onClick={() => handleSelectChat(chat.id)}
             >
               <span className='flex-1 truncate'>{chat.title}</span>
@@ -54,7 +54,7 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="h-8 w-8 shrink-0 hover:bg-primary/20"
                 onClick={(e) => {
                     e.stopPropagation();
                     onDeleteChat(chat.id);
