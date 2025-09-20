@@ -11,7 +11,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AIResponse } from "@/components/ai-response";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HeartPulse, Pill, Sparkles } from "lucide-react";
+import { HeartPulse, User, Bot } from "lucide-react";
+
+type ChatMessage = {
+    role: 'user' | 'model';
+    content: string;
+};
 
 const initialState: FormState = {
   message: null,
@@ -23,14 +28,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? (
-        <>
-          <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-          Getting Advice...
-        </>
-      ) : (
-        "Get AI Advice"
-      )}
+      {pending ? "Sending..." : "Send"}
     </Button>
   );
 }
@@ -47,24 +45,35 @@ export function SymptomChecker() {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [symptoms, setSymptoms] = useState('');
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (state.message === "Success" || state.message === "Invalid form data.") {
-        // Form submitted, do nothing
-    } else if (state.message) {
+    if (state.message === "Success" && state.data) {
+        setChatHistory((prev) => [...prev, { role: 'user', content: symptoms }, { role: 'model', content: state.data.response }]);
+        setSymptoms('');
+    } else if (state.message && state.message !== "Invalid form data.") {
       toast({
         title: "Error",
         description: state.message,
         variant: "destructive",
       });
     }
-  }, [state, toast]);
+  }, [state, toast, symptoms]);
+
+  useEffect(() => {
+    chatContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [chatHistory])
 
   const handleExampleClick = (symptom: string) => {
+    setChatHistory([]);
     setSymptoms(symptom);
-    // Directly submit form
-    setTimeout(() => formRef.current?.requestSubmit(), 0);
+    setTimeout(() => {
+        formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click()
+    }, 0);
   }
+
+  const historyForForm = state.data?.history ?? [];
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -79,29 +88,9 @@ export function SymptomChecker() {
             </div>
           </CardHeader>
           <CardContent>
-            <form ref={formRef} action={formAction} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="symptoms" className="text-lg">
-                  How are you feeling?
-                </Label>
-                <Textarea
-                  id="symptoms"
-                  name="symptoms"
-                  placeholder="Describe your symptoms... (e.g., 'I have a high fever and a headache')"
-                  className="min-h-[120px] text-base"
-                  required
-                  value={symptoms}
-                  onChange={(e) => setSymptoms(e.target.value)}
-                />
-                {state.errors?.symptoms && (
-                  <p className="text-sm text-destructive">
-                    {state.errors.symptoms[0]}
-                  </p>
-                )}
-              </div>
-
-               <div className="space-y-3">
-                 <Label className="text-base">Or try an example:</Label>
+            {chatHistory.length === 0 && (
+                 <div className="space-y-3 mb-6">
+                 <Label className="text-base">Need help? Try an example:</Label>
                  <div className="flex flex-wrap gap-2">
                     {exampleSymptoms.map(ex => (
                         <Button key={ex.name} type="button" variant="outline" size="sm" onClick={() => handleExampleClick(ex.symptom)}>
@@ -110,6 +99,55 @@ export function SymptomChecker() {
                     ))}
                  </div>
                </div>
+            )}
+            
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-4" ref={chatContainerRef}>
+                {chatHistory.map((msg, index) => (
+                    <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                       {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
+                        <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} />}
+                        </div>
+                        {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
+                    </div>
+                ))}
+                {useFormStatus().pending && chatHistory.length > 0 && (
+                     <div className="flex gap-3 justify-start">
+                        <Bot className="h-6 w-6 text-primary flex-shrink-0" />
+                        <div className="rounded-lg p-3 max-w-[85%] bg-muted">
+                           <AIResponse response={null} isStreaming={true} />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <form ref={formRef} action={formAction} className="space-y-6">
+               <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
+              <div className="space-y-2">
+                <Label htmlFor="symptoms" className="text-lg">
+                  {chatHistory.length === 0 ? "How are you feeling?" : "Ask a follow-up question:"}
+                </Label>
+                <Textarea
+                  id="symptoms"
+                  name="symptoms"
+                  placeholder={chatHistory.length === 0 ? "Describe your symptoms... (e.g., 'I have a high fever and a headache')" : "e.g., What should I eat?"}
+                  className="min-h-[100px] text-base"
+                  required
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        formRef.current?.querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
+                    }
+                  }}
+                />
+                {state.errors?.symptoms && (
+                  <p className="text-sm text-destructive">
+                    {state.errors.symptoms[0]}
+                  </p>
+                )}
+              </div>
 
               <div className="space-y-3">
                 <Label className="text-lg">Response Language</Label>
@@ -139,7 +177,7 @@ export function SymptomChecker() {
           </CardContent>
         </Card>
         
-        <AIResponse response={state.data} />
+        {chatHistory.length === 0 && <AIResponse response={state.data?.response ?? null} isStreaming={useFormStatus().pending} />}
 
       </div>
     </div>

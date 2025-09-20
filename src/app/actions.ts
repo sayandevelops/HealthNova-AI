@@ -1,20 +1,25 @@
 
 "use server";
 
-import { symptomChecker } from "@/ai/flows/symptom-checker";
+import { symptomChecker, type ChatHistory } from "@/ai/flows/symptom-checker";
 import { z } from "zod";
 
 const actionSchema = z.object({
-  symptoms: z.string().min(3, "Please describe your symptoms in more detail.").max(500, "Please keep your description under 500 characters."),
+  symptoms: z.string().min(1, "Please enter a message.").max(1000, "Please keep your message under 1000 characters."),
   language: z.enum(["en", "hi", "bn"]),
+  history: z.string().optional(),
 });
 
 export type FormState = {
   message: string | null;
-  data: string | null;
+  data: {
+    response: string;
+    history: ChatHistory;
+  } | null;
   errors: {
     symptoms?: string[] | undefined;
     language?: string[] | undefined;
+    history?: string[] | undefined;
   } | null;
 };
 
@@ -25,6 +30,7 @@ export async function getHealthAdvice(
   const rawFormData = {
     symptoms: formData.get("symptoms"),
     language: formData.get("language"),
+    history: formData.get("history"),
   };
 
   const validatedFields = actionSchema.safeParse(rawFormData);
@@ -36,13 +42,29 @@ export async function getHealthAdvice(
       data: null,
     };
   }
+  
+  const history: ChatHistory = validatedFields.data.history ? JSON.parse(validatedFields.data.history) : [];
 
   try {
-    const result = await symptomChecker(validatedFields.data);
+    const result = await symptomChecker({
+      symptoms: validatedFields.data.symptoms,
+      language: validatedFields.data.language,
+      history: history,
+    });
+    
+    const newHistory = [
+        ...history,
+        { role: 'user' as const, content: [{ text: validatedFields.data.symptoms }] },
+        { role: 'model' as const, content: [{ text: result.advice }] },
+    ];
+
     return {
       message: "Success",
       errors: null,
-      data: result.advice,
+      data: {
+        response: result.advice,
+        history: newHistory,
+      },
     };
   } catch (error) {
     console.error(error);

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -10,15 +11,19 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {Message} from 'genkit/model';
+
+export type ChatHistory = Message[];
 
 const SymptomCheckerInputSchema = z.object({
   symptoms: z
     .string()
-    .describe('The symptoms described by the user.'),
+    .describe('The symptoms described by the user, or a follow-up question.'),
   language: z
     .enum(['en', 'hi', 'bn'])
     .default('en')
     .describe('The language to respond in (English, Hindi, or Bengali).'),
+  history: z.array(z.any()).optional().describe("The chat history between the user and the AI assistant."),
 });
 export type SymptomCheckerInput = z.infer<typeof SymptomCheckerInputSchema>;
 
@@ -41,14 +46,14 @@ Your role is to provide safe, clear, step-by-step guidance for users with sympto
 1. Emergency First:
    - If the symptom is life-threatening (unconscious, heavy bleeding, chest pain, difficulty breathing, severe burns, seizures, stroke signs),
      IMMEDIATELY respond with:
-     - \"⚠️ This may be an emergency. Call emergency services right now.\"
+     - "⚠️ This may be an emergency. Call emergency services right now."
      - Provide only basic first-aid steps from WHO/Red Cross guidelines.
    - Do not give detailed Ayurvedic or home remedies in emergencies.
 
 2. Non-Emergency Queries:
    - Provide simple, evidence-based health advice.
    - Include basic Ayurvedic/home remedies only if safe and relevant.
-   - Always clarify: \"This is general information, not a medical diagnosis. Consult a doctor for confirmation.\"
+   - Always clarify: "This is general information, not a medical diagnosis. Consult a doctor for confirmation."
 
 3. Style & Format:
    - Respond in short, clear steps (numbered lists or bullet points).
@@ -61,10 +66,10 @@ Your role is to provide safe, clear, step-by-step guidance for users with sympto
    - Mark Ayurvedic advice separately as: “🌿 Ayurvedic Tip”.
 
 5. Safety:
-   - If unsure or data missing, say: \"I cannot provide a safe answer, please consult a doctor.\"
+   - If unsure or data missing, say: "I cannot provide a safe answer, please consult a doctor."
    - Never invent treatments or unsafe remedies.
 
-Based on the symptoms: {{{symptoms}}}
+Based on the latest user message: {{{symptoms}}}
 Respond in language: {{{language}}}
 `,
   config: {
@@ -96,7 +101,7 @@ const symptomCheckerFlow = ai.defineFlow(
     outputSchema: SymptomCheckerOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt(input, {history: input.history});
     return output!;
   }
 );
