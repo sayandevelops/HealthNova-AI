@@ -150,7 +150,7 @@ export function SymptomChecker() {
                 <Textarea
                   id="symptoms"
                   name="symptoms"
-                  placeholder={chatHistory.length === 0 ? "Describe your symptoms... (e.g., 'I have a high fever and a headache')" : "e.g., What should I eat?"}
+                  placeholder={chatHistory.length === 0 ? "Describe your symptoms for health advice..." : "e.g., What are some home remedies?"}
                   className="min-h-[100px] text-base"
                   required
                   value={symptoms}
