@@ -171,6 +171,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
       <div className="flex justify-start mb-2">
         <Button
           size="icon"
+          variant="ghost"
           onClick={handlePlayAudio}
           aria-label={audioState === 'playing' ? 'Stop audio' : 'Stop audio'}
           disabled={audioState === 'loading'}
