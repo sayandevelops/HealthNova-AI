@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Leaf, Volume2, LoaderCircle } from "lucide-react";
 import { getAudio } from "@/app/actions";
@@ -19,62 +18,74 @@ type AIResponseProps = {
 export function AIResponse({ response, isStreaming = false, chatHistory, audioRef }: AIResponseProps) {
   const [audioState, setAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
   const { toast } = useToast();
+  const audioQueueRef = useRef<string[]>([]);
+  const currentAudioIndexRef = useRef(0);
 
   const stopAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+    audioQueueRef.current = [];
+    currentAudioIndexRef.current = 0;
+    setAudioState('idle');
   };
 
   useEffect(() => {
-    // Cleanup function to stop audio when component unmounts
+    // Cleanup function to stop audio when component unmounts or response changes
     return () => {
-      if (audioState === 'playing') {
-        stopAudio();
-      }
+      stopAudio();
     };
-  }, [audioState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [response]);
 
+
+  const playNextInQueue = () => {
+    if (currentAudioIndexRef.current < audioQueueRef.current.length) {
+      const audioSrc = audioQueueRef.current[currentAudioIndexRef.current];
+      if (audioRef.current) {
+        audioRef.current.src = audioSrc;
+        audioRef.current.play();
+        currentAudioIndexRef.current++;
+      }
+    } else {
+      // Finished playing all audio clips
+      stopAudio();
+    }
+  };
 
   const handlePlayAudio = async () => {
     if (audioState === 'loading') return;
 
     if (audioState === 'playing') {
         stopAudio();
-        setAudioState('idle');
         return;
     }
     
-    // Stop any currently playing audio before starting a new one
     stopAudio();
 
     if (!response) return;
 
     setAudioState('loading');
     try {
-      const result = await getAudio(response);
+      // Split response into sentences. This regex is basic and might not cover all edge cases.
+      const sentences = response.match(/[^.!?]+[.!?]*/g) || [response];
+      
+      const result = await getAudio(sentences);
       if ('error' in result) {
         throw new Error(result.error);
       }
       
+      audioQueueRef.current = result.audio;
+      currentAudioIndexRef.current = 0;
+
       const audio = audioRef.current || new Audio();
       audioRef.current = audio;
 
-      audio.src = result.audio;
-      audio.play();
-      setAudioState('playing');
-
-      audio.onended = () => {
-        setAudioState('idle');
-      };
-
-      audio.onpause = () => {
-        if (audio.currentTime > 0 && !audio.ended) {
-          setAudioState('idle');
-        }
-      }
+      audio.onended = playNextInQueue;
       
+      setAudioState('playing');
+      playNextInQueue();
 
     } catch (error) {
       console.error(error);
@@ -83,7 +94,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
         description: "Could not generate audio for this message.",
         variant: "destructive",
       });
-      setAudioState('idle');
+      stopAudio();
     }
   };
 
@@ -173,7 +184,7 @@ export function AIResponse({ response, isStreaming = false, chatHistory, audioRe
           size="icon"
           variant="ghost"
           onClick={handlePlayAudio}
-          aria-label={audioState === 'playing' ? 'Stop audio' : 'Stop audio'}
+          aria-label={audioState === 'playing' ? 'Stop audio' : 'Play audio'}
           disabled={audioState === 'loading'}
           className="h-8 w-8 text-primary hover:bg-primary/10"
         >
