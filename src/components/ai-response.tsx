@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Leaf, Volume2, LoaderCircle } from "lucide-react";
@@ -12,22 +12,41 @@ type AIResponseProps = {
   response: string | null;
   isStreaming?: boolean;
   chatHistory: { role: 'user' | 'model', content: string }[];
+  audioRef: React.MutableRefObject<HTMLAudioElement | null>;
 };
 
-export function AIResponse({ response, isStreaming = false, chatHistory }: AIResponseProps) {
+export function AIResponse({ response, isStreaming = false, chatHistory, audioRef }: AIResponseProps) {
   const [audioState, setAudioState] = useState<'idle' | 'loading' | 'playing'>('idle');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  useEffect(() => {
+    // Cleanup function to stop audio when component unmounts
+    return () => {
+      if (audioState === 'playing') {
+        stopAudio();
+      }
+    };
+  }, [audioState]);
+
 
   const handlePlayAudio = async () => {
     if (audioState === 'loading') return;
 
-    if (audioRef.current && audioState === 'playing') {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+    if (audioState === 'playing') {
+        stopAudio();
         setAudioState('idle');
         return;
     }
+    
+    // Stop any currently playing audio before starting a new one
+    stopAudio();
 
     if (!response) return;
 
@@ -46,6 +65,12 @@ export function AIResponse({ response, isStreaming = false, chatHistory }: AIRes
       audio.onended = () => {
         setAudioState('idle');
       };
+
+      audio.onpause = () => {
+        if (audio.currentTime > 0 && !audio.ended) {
+          setAudioState('idle');
+        }
+      }
       
       if (!audioRef.current) {
         audioRef.current = audio;

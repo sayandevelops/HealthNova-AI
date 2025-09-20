@@ -47,6 +47,8 @@ export function SymptomChecker() {
   const [symptoms, setSymptoms] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
 
   useEffect(() => {
     if (state.message === "Success" && state.data) {
@@ -76,6 +78,10 @@ export function SymptomChecker() {
   }
 
   const handleReset = () => {
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+    }
     setChatHistory([]);
     setSymptoms('');
     // To fully reset the form state, we can reset the form element itself
@@ -126,7 +132,7 @@ export function SymptomChecker() {
                     <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                        {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
                         <div className={`rounded-lg p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={chatHistory} />}
+                           {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={chatHistory} audioRef={audioRef} />}
                         </div>
                         {msg.role === 'user' && <User className="h-6 w-6 text-primary flex-shrink-0" />}
                     </div>
@@ -135,7 +141,7 @@ export function SymptomChecker() {
                      <div className="flex gap-3 justify-start">
                         <Bot className="h-6 w-6 text-primary flex-shrink-0" />
                         <div className="rounded-lg p-3 max-w-[85%] bg-muted">
-                           <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} />
+                           <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} audioRef={audioRef} />
                         </div>
                     </div>
                 )}
@@ -199,8 +205,8 @@ export function SymptomChecker() {
           </CardContent>
         </Card>
         
-        {chatHistory.length === 0 && !isPending && <AIResponse response={state.data?.response ?? null} isStreaming={false} chatHistory={chatHistory} />}
-        {isPending && chatHistory.length === 0 && <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} />}
+        {chatHistory.length === 0 && !isPending && <AIResponse response={state.data?.response ?? null} isStreaming={false} chatHistory={chatHistory} audioRef={audioRef} />}
+        {isPending && chatHistory.length === 0 && <AIResponse response={null} isStreaming={true} chatHistory={chatHistory} audioRef={audioRef} />}
 
       </div>
     </div>
