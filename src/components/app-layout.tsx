@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { HeartPulse, Menu, MessageSquare, Info, Trash2 } from 'lucide-react';
 import type { ChatThread } from './symptom-checker';
+import { ThemeToggle } from './theme-toggle';
 
 type AppLayoutProps = {
     children: React.ReactNode;
@@ -79,13 +80,16 @@ export function AppLayout({ children, chatHistory = [], currentChatId, onSelectC
           <Info className="h-4 w-4" />
           About
         </Link>
-        <div className="flex items-center gap-3">
-          <HeartPulse className="h-8 w-8 text-primary" />
-          <div>
-            <p className="text-lg font-bold tracking-tight font-headline">
-              HealthNova AI
-            </p>
-          </div>
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <HeartPulse className="h-8 w-8 text-primary" />
+                <div>
+                    <p className="text-lg font-bold tracking-tight font-headline">
+                    HealthNova AI
+                    </p>
+                </div>
+            </div>
+            <ThemeToggle />
         </div>
       </div>
     </div>
