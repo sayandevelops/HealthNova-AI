@@ -8,7 +8,6 @@ import { z } from "zod";
 
 const symptomActionSchema = z.object({
   symptoms: z.string().min(1, "Please enter a message.").max(1000, "Please keep your message under 1000 characters."),
-  language: z.enum(["en", "hi", "bn"]),
   history: z.string().optional(),
 });
 
@@ -20,7 +19,6 @@ export type FormState = {
   } | null;
   errors: {
     symptoms?: string[] | undefined;
-    language?: string[] | undefined;
     history?: string[] | undefined;
   } | null;
 };
@@ -31,7 +29,6 @@ export async function getHealthAdvice(
 ): Promise<FormState> {
   const rawFormData = {
     symptoms: formData.get("symptoms"),
-    language: formData.get("language"),
     history: formData.get("history"),
   };
 
@@ -59,7 +56,6 @@ export async function getHealthAdvice(
   try {
     const result = await symptomChecker({
       symptoms: validatedFields.data.symptoms,
-      language: validatedFields.data.language,
       history: history,
     });
     

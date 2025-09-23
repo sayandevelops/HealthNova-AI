@@ -8,11 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AIResponse } from "@/components/ai-response";
 import { useToast } from "@/hooks/use-toast";
-import { HeartPulse, User, Bot, RefreshCcw, Send, Languages, Mic, MicOff, LoaderCircle } from "lucide-react";
+import { HeartPulse, User, Bot, RefreshCcw, Send, Mic, MicOff, LoaderCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLayout } from "./app-layout";
 import type { ChatHistory as GenkitChatHistory } from "@/ai/flows/symptom-checker";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ChatMessage = {
     role: 'user' | 'model';
@@ -23,7 +22,6 @@ export type ChatThread = {
     id: string;
     title: string;
     messages: ChatMessage[];
-    language: 'en' | 'hi' | 'bn';
 };
 
 const initialState: FormState = {
@@ -60,7 +58,6 @@ export function SymptomChecker() {
 
   const [chatHistory, setChatHistory] = useState<ChatThread[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [language, setLanguage] = useState<'en' | 'hi' | 'bn'>('en');
 
   const { pending: isFormPending } = useFormStatus();
 
@@ -126,7 +123,6 @@ export function SymptomChecker() {
                     id: newChatId,
                     title: lastUserMessageContent.substring(0, 40) + (lastUserMessageContent.length > 40 ? '...' : ''),
                     messages: [newUserMessage, newAiMessage],
-                    language: language,
                 };
                 setCurrentChatId(newChatId);
                 return [newChat, ...prevHistory];
@@ -166,7 +162,6 @@ export function SymptomChecker() {
     }
     setCurrentChatId(null);
     setSymptoms('');
-    setLanguage('en');
     (formRef.current as HTMLFormElement)?.reset();
   }
 
@@ -189,7 +184,6 @@ export function SymptomChecker() {
     const selectedChat = chatHistory.find(chat => chat.id === id);
     if(selectedChat) {
         setCurrentChatId(id);
-        setLanguage(selectedChat.language);
     }
   }
 
@@ -252,7 +246,6 @@ export function SymptomChecker() {
       role: msg.role,
       content: [{ text: msg.content }]
   }));
-  const currentLanguage = currentChat?.language || language;
 
   const handleFormAction = (formData: FormData) => {
     if(symptoms.trim() === '') return;
@@ -261,13 +254,6 @@ export function SymptomChecker() {
     formAction(formData);
   };
   
-  const handleLanguageChange = (value: 'en' | 'hi' | 'bn') => {
-    setLanguage(value);
-    if (currentChatId) {
-        setChatHistory(prev => prev.map(chat => chat.id === currentChatId ? {...chat, language: value} : chat));
-    }
-  };
-
   const userMessageContent = symptoms;
 
   return (
@@ -307,7 +293,7 @@ export function SymptomChecker() {
                                 {msg.role === 'model' && <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                                  {msg.role === 'user' && <div className="flex-grow"></div>}
                                 <div className={`p-3 max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-lg' : ''}`}>
-                                    {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={historyForForm} audioRef={audioRef} />}
+                                    {msg.role === 'user' ? <p>{msg.content}</p> : <AIResponse response={msg.content} isStreaming={false} chatHistory={historyForForm} />}
                                 </div>
                                 {msg.role === 'user' && <User className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />}
                             </div>
@@ -325,7 +311,7 @@ export function SymptomChecker() {
                             <div className="flex gap-4 items-start justify-start w-full">
                                 <Bot className="h-8 w-8 text-primary flex-shrink-0 rounded-full border p-1" />
                                 <div className="rounded-lg p-3 max-w-[85%]">
-                                    <AIResponse response={null} isStreaming={true} chatHistory={[]} audioRef={audioRef} />
+                                    <AIResponse response={null} isStreaming={true} chatHistory={[]} />
                                 </div>
                             </div>
                         )}
@@ -338,27 +324,12 @@ export function SymptomChecker() {
                 <div className="max-w-3xl mx-auto">
                     <form ref={formRef} action={handleFormAction} className="relative">
                         <div className="relative flex items-center">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="absolute left-2.5 bottom-2.5 h-8 w-8">
-                                        <Languages className="h-5 w-5" />
-                                        <span className="sr-only">Select Language</span>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-1 mb-2">
-                                    <div className="flex flex-col gap-1">
-                                        <Button variant={currentLanguage === 'en' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('en')} className="justify-start">English</Button>
-                                        <Button variant={currentLanguage === 'hi' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('hi')} className="justify-start">Hindi</Button>
-                                        <Button variant={currentLanguage === 'bn' ? 'secondary' : 'ghost'} onClick={() => handleLanguageChange('bn')} className="justify-start">Bengali</Button>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                            <input type="hidden" name="language" value={currentLanguage} />
+                            <input type="hidden" name="history" value={JSON.stringify(historyForForm)} />
                             <Textarea
                                 id="symptoms"
                                 name="symptoms"
                                 placeholder={isRecording ? "Recording..." : "Describe your symptoms or record audio..."}
-                                className="min-h-[52px] text-base pl-12 pr-24 resize-none"
+                                className="min-h-[52px] text-base pl-4 pr-24 resize-none"
                                 required
                                 value={symptoms}
                                 onChange={(e) => setSymptoms(e.target.value)}
